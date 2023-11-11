@@ -25,12 +25,7 @@ func (l logger) Error(msg string, args ...any) {
 	l.slog.Error(msg, args...)
 }
 
-func newJsonLogger(dst io.Writer, level slog.Level) logger {
-	jsonHandler := slog.NewJSONHandler(dst, &slog.HandlerOptions{Level: level})
-	return logger{slog.New(jsonHandler)}
-}
-
-func newTextLogger(dst io.Writer, level slog.Level) logger {
+func newTextLogger(dst io.Writer, level slog.Level) *slog.Logger {
 	textLogger := slog.NewTextHandler(dst, &slog.HandlerOptions{Level: level})
-	return logger{slog.New(textLogger)}
+	return slog.New(textLogger)
 }

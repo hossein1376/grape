@@ -9,8 +9,8 @@ type response struct {
 	serialize
 }
 
-func newResponse(logger logger, json serialize) *response {
-	return &response{logger: logger, serialize: json}
+func newResponse(logger logger, json serialize) response {
+	return response{logger: logger, serialize: json}
 }
 
 type resp struct {
