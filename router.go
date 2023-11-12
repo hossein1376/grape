@@ -1,11 +1,11 @@
 package grape
 
 import (
-	"fmt"
 	"net/http"
 )
 
 type Router struct {
+	middlewares []func(http.Handler) http.Handler
 	*http.ServeMux
 }
 
@@ -14,31 +14,38 @@ func NewRouter() *Router {
 }
 
 func (r *Router) Get(route string, handler http.HandlerFunc) {
-	r.Handle(fmt.Sprintf("%s %s", http.MethodGet, route), handler)
+	r.Handle(http.MethodGet+" "+route, r.withMiddlewares(handler))
 }
 
 func (r *Router) Post(route string, handler http.HandlerFunc) {
-	r.Handle(fmt.Sprintf("%s %s", http.MethodPost, route), handler)
+	r.Handle(http.MethodPost+" "+route, r.withMiddlewares(handler))
 }
 
 func (r *Router) Put(route string, handler http.HandlerFunc) {
-	r.Handle(fmt.Sprintf("%s %s", http.MethodPut, route), handler)
+	r.Handle(http.MethodPut+" "+route, r.withMiddlewares(handler))
 }
 
 func (r *Router) Patch(route string, handler http.HandlerFunc) {
-	r.Handle(fmt.Sprintf("%s %s", http.MethodPatch, route), handler)
+	r.Handle(http.MethodPatch+" "+route, r.withMiddlewares(handler))
 }
 
 func (r *Router) Delete(route string, handler http.HandlerFunc) {
-	r.Handle(fmt.Sprintf("%s %s", http.MethodDelete, route), handler)
+	r.Handle(http.MethodDelete+" "+route, r.withMiddlewares(handler))
 }
 
 func (r *Router) Use(middlewares ...func(http.Handler) http.Handler) {
-	for _, middleware := range middlewares {
-		middleware(*r)
-	}
+	r.middlewares = append(r.middlewares, middlewares...)
 }
 
 func (r *Router) Serve(addr string) error {
-	return http.ListenAndServe(addr, r)
+	srv := http.Server{Addr: addr, Handler: r}
+	return srv.ListenAndServe()
+}
+
+func (r *Router) withMiddlewares(handler http.Handler) http.Handler {
+	h := handler
+	for _, middleware := range r.middlewares {
+		h = middleware(h)
+	}
+	return h
 }
