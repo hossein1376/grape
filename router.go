@@ -47,11 +47,18 @@ func (r *Router) UseAll(middlewares ...func(http.Handler) http.Handler) {
 }
 
 func (r *Router) Serve(addr string) error {
+func (r *Router) Serve(addr string, server ...*http.Server) error {
 	var h http.Handler = r
 	for _, middleware := range r.global {
 		h = middleware(h)
 	}
-	srv := http.Server{Addr: addr, Handler: h}
+
+	srv := &http.Server{}
+	if len(server) != 0 {
+		srv = server[0]
+	}
+	srv.Addr, srv.Handler = addr, h
+
 	return srv.ListenAndServe()
 }
 
