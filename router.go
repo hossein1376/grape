@@ -16,27 +16,32 @@ func NewRouter() *Router {
 	return &Router{ServeMux: http.NewServeMux()}
 }
 
+// Get calls Method with http.MethodGet
 func (r *Router) Get(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodGet, route, handler)
 }
 
+// Post calls Method with http.MethodPost
 func (r *Router) Post(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodPost, route, handler)
 }
 
+// Put calls Method with http.MethodPut
 func (r *Router) Put(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodPut, route, handler)
 }
 
+// Patch calls Method with http.MethodPatch
 func (r *Router) Patch(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodPatch, route, handler)
 }
 
+// Delete calls Method with http.MethodDelete
 func (r *Router) Delete(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodDelete, route, handler)
 }
 
-func (r *Router) handle(method, route string, handler http.HandlerFunc) {
+// Method accept a http method, route and handler
 func (r *Router) Method(method, route string, handler http.HandlerFunc) {
 	r.Handle(method+" "+route, r.withMiddlewares(handler))
 }
