@@ -17,26 +17,27 @@ func NewRouter() *Router {
 }
 
 func (r *Router) Get(route string, handler http.HandlerFunc) {
-	r.handle(http.MethodGet, route, handler)
+	r.Method(http.MethodGet, route, handler)
 }
 
 func (r *Router) Post(route string, handler http.HandlerFunc) {
-	r.handle(http.MethodPost, route, handler)
+	r.Method(http.MethodPost, route, handler)
 }
 
 func (r *Router) Put(route string, handler http.HandlerFunc) {
-	r.handle(http.MethodPut, route, handler)
+	r.Method(http.MethodPut, route, handler)
 }
 
 func (r *Router) Patch(route string, handler http.HandlerFunc) {
-	r.handle(http.MethodPatch, route, handler)
+	r.Method(http.MethodPatch, route, handler)
 }
 
 func (r *Router) Delete(route string, handler http.HandlerFunc) {
-	r.handle(http.MethodDelete, route, handler)
+	r.Method(http.MethodDelete, route, handler)
 }
 
 func (r *Router) handle(method, route string, handler http.HandlerFunc) {
+func (r *Router) Method(method, route string, handler http.HandlerFunc) {
 	r.Handle(method+" "+route, r.withMiddlewares(handler))
 }
 
