@@ -25,15 +25,23 @@ var defaultOptions = Options{
 	Serialize: serialize{},
 }
 
-func New(opts ...Options) *Server {
+func New(opts ...Options) Server {
 	var opt Options
 	if len(opts) == 0 {
 		opt = defaultOptions
 	} else {
 		opt = opts[0]
+
+		if opt.Log == nil {
+			opt.Log = defaultOptions.Log
+		}
+
+		if opt.Serialize == nil {
+			opt.Serialize = defaultOptions.Serialize
+		}
 	}
 
-	return &Server{
+	return Server{
 		serializer: opt.Serialize,
 		logger:     logger{opt.Log},
 		response:   newResponse(logger{opt.Log}, opt.Serialize),
