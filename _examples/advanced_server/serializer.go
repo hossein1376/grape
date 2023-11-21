@@ -12,6 +12,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+// Jsoniter implements grape.serializer
+// I have intentionally used an external dependency just to demonstrate you can use anything you would like
 type Jsoniter struct{}
 
 func (Jsoniter) WriteJson(w http.ResponseWriter, status int, data any, _ http.Header) error {
