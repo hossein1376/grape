@@ -6,33 +6,6 @@ import (
 	"github.com/hossein1376/grape"
 )
 
-func (h *handler) router() *grape.Router {
-	// Create an instance of grape.Router, which basically is http.NewServeMux with added helper methods
-	r := grape.NewRouter()
-
-	// Define middlewares to be used by all endpoints
-	r.UseAll(h.LoggerMiddleware, h.RecoverMiddleware)
-
-	r.Post("/login", h.authHandler)
-
-	// Previously declared endpoints will not be impacted by these middlewares
-	r.Use(checkAuth)
-
-	permits := "/permits"
-	r.Post(permits, h.getAllPermitsHandler)
-	r.Post(permits+"/{pid}", h.createPermitHandler)
-
-	users := "/users"
-	r.Post(users, h.createNewUser)
-	r.Get(users+"/{id}", h.getUserByID)
-
-	// A possible way to create sub-paths
-	userPermits := users + permits
-	r.Get(userPermits, h.getUserPermits)
-
-	return r
-}
-
 func (h *handler) createPermitHandler(w http.ResponseWriter, r *http.Request) {
 	pid := h.ParamInt64(r, "pid")
 	if pid == 0 {
