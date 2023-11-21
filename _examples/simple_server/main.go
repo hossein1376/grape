@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/hossein1376/grape"
@@ -31,7 +30,7 @@ func main() {
 }
 
 func (h *handler) rootHandler(w http.ResponseWriter, _ *http.Request) {
-	h.Info("Get request on root")
+	h.Warn("Get request on root")
 	h.OkResponse(w, "Hello, World!")
 }
 
@@ -47,7 +46,7 @@ func (h *handler) pingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Info("ping handler", "request", req.Ping)
+	h.Debug("ping handler", "request", req.Ping)
 	h.NoContentResponse(w)
 }
 
@@ -57,5 +56,5 @@ func (h *handler) parameterHandler(w http.ResponseWriter, r *http.Request) {
 		h.NotFoundResponse(w)
 		return
 	}
-	h.CreatedResponse(w, fmt.Sprintf("you requested for %d", id))
+	h.CreatedResponse(w, grape.Map{"id": id})
 }
