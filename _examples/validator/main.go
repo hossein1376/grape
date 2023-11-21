@@ -8,9 +8,7 @@ import (
 )
 
 type handler struct {
-	// data/models
-	// settings
-	*grape.Server
+	grape.Server
 }
 
 func main() {
