@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type serializer interface {
+	WriteJson(w http.ResponseWriter, status int, data any, headers http.Header) error
+	ReadJson(w http.ResponseWriter, r *http.Request, dst any) error
+}
+
 type serialize struct{}
 
 func (serialize) WriteJson(w http.ResponseWriter, status int, data any, headers http.Header) error {

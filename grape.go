@@ -9,16 +9,18 @@ import (
 
 type Server struct {
 	logger
-	serialize
+	serializer
 	response
 }
 
 type Options struct {
-	Log *slog.Logger
+	Log       *slog.Logger
+	Serialize serializer
 }
 
 var defaultOptions = Options{
-	Log: newTextLogger(os.Stdout, slog.LevelInfo),
+	Log:       newTextLogger(os.Stdout, slog.LevelInfo),
+	Serialize: serialize{},
 }
 
 func New(opts ...Options) *Server {
@@ -29,12 +31,10 @@ func New(opts ...Options) *Server {
 		opt = opts[0]
 	}
 
-	logging := logger{opt.Log}
-	serializer := serialize{}
 	return &Server{
-		serialize: serializer,
-		logger:    logging,
-		response:  newResponse(logging, serializer),
+		serializer: opt.Serialize,
+		logger:     logger{opt.Log},
+		response:   newResponse(logger{opt.Log}, opt.Serialize),
 	}
 }
 
