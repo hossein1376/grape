@@ -9,13 +9,20 @@ import (
 type handler struct {
 	// data/models
 	// settings
-	*grape.Server
+	grape.Server
 }
 
 func main() {
-	h := handler{Server: grape.New()}
+	// Instantiate the grape.Server inside your struct of choice
+	h := handler{
+		// Models: models.New()
+		// Settings: settings.Get()
+		Server: grape.New(),
+	}
+	// Create an instance of grape.Router, which basically is http.NewServeMux with added helper methods
 	r := grape.NewRouter()
 
+	// Define your routes
 	r.UseAll(h.LoggerMiddleware, h.RecoverMiddleware)
 	r.Get("/", h.rootHandler)
 	r.Post("/ping", h.pingHandler)
