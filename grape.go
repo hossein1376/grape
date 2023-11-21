@@ -7,6 +7,8 @@ import (
 	"strconv"
 )
 
+type Map = map[string]any
+
 type Server struct {
 	logger
 	serializer
