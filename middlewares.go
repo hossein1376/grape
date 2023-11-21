@@ -15,7 +15,7 @@ func (s *Server) RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				s.Info("Panic recovered", "message", err)
+				s.Error("Panic recovered", "message", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte(http.StatusText(http.StatusInternalServerError)))
 			}

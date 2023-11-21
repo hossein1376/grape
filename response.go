@@ -17,7 +17,7 @@ type resp struct {
 	Message any `json:"message,omitempty"`
 }
 
-// Response is a generic function which responses with the provided message and status code,
+// Response is a general function which responses with the provided message and status code,
 // it will return 500 if case of failure
 func (res response) Response(w http.ResponseWriter, statusCode int, message any) {
 	err := res.WriteJson(w, statusCode, message, nil)
