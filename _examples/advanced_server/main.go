@@ -2,7 +2,9 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/hossein1376/grape"
 )
@@ -34,7 +36,15 @@ func main() {
 	r := h.router()
 
 	h.Info("starting server on port 3000...")
-	err := r.Serve(":3000")
+
+	// You can optionally pass an instance of *http.Server to configure the running settings
+	// Note that two fields `Addr` and `Handler` are set by the Serve method. If provided, they'll be overwritten.
+	srv := &http.Server{
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	err := r.Serve(":3000", srv)
 	if err != nil {
 		h.Error("failed to start server", "error", err)
 		return
