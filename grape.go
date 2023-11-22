@@ -21,7 +21,7 @@ type Options struct {
 }
 
 var defaultOptions = Options{
-	Log:       newTextLogger(os.Stdout, slog.LevelInfo),
+	Log:       slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})),
 	Serialize: serialize{},
 }
 
