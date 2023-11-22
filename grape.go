@@ -57,7 +57,7 @@ func New(opts ...Options) Server {
 
 // ParamInt extracts the parameter by name from the request and converts it to integer.
 // It will return 0 if no parameter was found or there was an error converting it to int.
-func (s *Server) ParamInt(r *http.Request, name string) int {
+func (server Server) ParamInt(r *http.Request, name string) int {
 	param, err := strconv.Atoi(r.PathValue(name))
 	if err != nil {
 		return 0
@@ -67,7 +67,7 @@ func (s *Server) ParamInt(r *http.Request, name string) int {
 
 // ParamInt64 extracts the parameter by name from the request and converts it to integer.
 // It will return 0 if no parameter was found or there was an error converting it to int64.
-func (s *Server) ParamInt64(r *http.Request, name string) int64 {
+func (server Server) ParamInt64(r *http.Request, name string) int64 {
 	param, err := strconv.ParseInt(r.PathValue(name), 10, 64)
 	if err != nil {
 		return 0

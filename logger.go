@@ -9,21 +9,21 @@ type logger struct {
 }
 
 // Debug logs at LevelDebug.
-func (l logger) Debug(msg string, args ...any) {
-	l.slog.Debug(msg, args...)
+func (log logger) Debug(msg string, args ...any) {
+	log.slog.Debug(msg, args...)
 }
 
 // Info logs at LevelInfo.
-func (l logger) Info(msg string, args ...any) {
-	l.slog.Info(msg, args...)
+func (log logger) Info(msg string, args ...any) {
+	log.slog.Info(msg, args...)
 }
 
 // Warn logs at LevelWarn.
-func (l logger) Warn(msg string, args ...any) {
-	l.slog.Warn(msg, args...)
+func (log logger) Warn(msg string, args ...any) {
+	log.slog.Warn(msg, args...)
 }
 
 // Error logs at LevelError.
-func (l logger) Error(msg string, args ...any) {
-	l.slog.Error(msg, args...)
+func (log logger) Error(msg string, args ...any) {
+	log.slog.Error(msg, args...)
 }

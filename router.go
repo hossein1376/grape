@@ -11,7 +11,7 @@ type Router struct {
 }
 
 // NewRouter will initialize a router of type Router which embeds type ServeMux,
-// with added helper functions such ad Get, Post, Use and ...
+// with added helper functions such ad Get, Post, Use and others.
 func NewRouter() *Router {
 	return &Router{ServeMux: http.NewServeMux()}
 }
