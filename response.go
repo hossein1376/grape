@@ -22,8 +22,9 @@ type resp struct {
 func (res response) Response(w http.ResponseWriter, statusCode int, message any) {
 	err := res.WriteJson(w, statusCode, message, nil)
 	if err != nil {
-		res.logInternalError(err, message)
-		w.WriteHeader(500)
+		res.Error("writing json response", "error", err, "data", message)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(http.StatusText(http.StatusInternalServerError)))
 	}
 }
 
@@ -81,9 +82,4 @@ func (res response) NotFoundResponse(w http.ResponseWriter, err ...error) {
 func (res response) InternalServerErrorResponse(w http.ResponseWriter) {
 	r := resp{Message: http.StatusText(http.StatusInternalServerError)}
 	res.Response(w, http.StatusInternalServerError, r)
-}
-
-// logInternalError logs the error when writing json response fails
-func (res response) logInternalError(err error, data any) {
-	res.Error("writing json response", "error", err, "data", data)
 }
