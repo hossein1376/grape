@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// serializer interface consists of two methods, one for reading json inputs and one for writing json outputs.
 type serializer interface {
 	WriteJson(w http.ResponseWriter, status int, data any, headers http.Header) error
 	ReadJson(w http.ResponseWriter, r *http.Request, dst any) error
@@ -17,6 +18,7 @@ type serializer interface {
 
 type serialize struct{}
 
+// WriteJson will write back the data in json with the provided status code and headers.
 func (serialize) WriteJson(w http.ResponseWriter, status int, data any, headers http.Header) error {
 	js, err := json.Marshal(data)
 	if err != nil {
@@ -35,6 +37,7 @@ func (serialize) WriteJson(w http.ResponseWriter, status int, data any, headers 
 	return err
 }
 
+// ReadJson will decode incoming json requests. It will return a human-readable error in case of failure.
 func (serialize) ReadJson(w http.ResponseWriter, r *http.Request, dst any) error {
 	maxBytes := 1_048_576
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
