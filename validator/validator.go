@@ -22,7 +22,7 @@ type Validator struct {
 	Errors map[string]string `json:"errors"`
 }
 
-// New will return an instance of Validator
+// New will return an instance of Validator.
 func New() *Validator {
 	return &Validator{Errors: make(map[string]string)}
 }
@@ -32,7 +32,7 @@ func (v *Validator) Valid() bool {
 	return len(v.Errors) == 0
 }
 
-// Check accepts name of the field as the first argument, following an arbitrary number of validation Case.
+// Check accepts name of the field as the first argument, following by an arbitrary number of validation Case.
 func (v *Validator) Check(key string, cases ...Case) {
 	for _, c := range cases {
 		if !c.Cond {
@@ -52,7 +52,7 @@ func Empty(value string) bool {
 	return len(value) == 0
 }
 
-// EndsWith check whether a string ends with a particulate suffix.
+// EndsWith check whether a string ends with a particular suffix.
 func EndsWith(value, suffix string) bool {
 	return strings.HasSuffix(value, suffix)
 }
@@ -65,7 +65,7 @@ func IsNumber(value string) bool {
 	return true
 }
 
-// In checks if the value is present in a given list arguments.
+// In checks if the value is present in a given list of arguments.
 func In[T comparable](value T, list ...T) bool {
 	return slices.Contains(list, value)
 }
@@ -75,7 +75,7 @@ func Matches(value string, rx *regexp.Regexp) bool {
 	return rx.MatchString(value)
 }
 
-// Max checks if a value is equal or bigger than a maximum.
+// Max checks if a value is equal or lesser than a maximum.
 // For length, use MaxLength instead.
 func Max[T cmp.Ordered](value T, max T) bool {
 	return cmp.Compare(value, max) == -1 || cmp.Compare(value, max) == 0
@@ -97,7 +97,7 @@ func MinLength(value string, min int) bool {
 	return min <= utf8.RuneCountInString(value)
 }
 
-// NotEmpty checks if the given value is not empry
+// NotEmpty checks if the given value is not empty.
 func NotEmpty(value string) bool {
 	return len(value) != 0
 }
@@ -113,7 +113,7 @@ func RangeLength(value string, min, max int) bool {
 	return min <= utf8.RuneCountInString(value) && utf8.RuneCountInString(value) <= max
 }
 
-// StartsWith check whether a string starts with a particulate prefix.
+// StartsWith check whether a string starts with a particular prefix.
 func StartsWith(value, prefix string) bool {
 	return strings.HasPrefix(value, prefix)
 }

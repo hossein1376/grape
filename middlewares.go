@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-// LoggerMiddleware logs incoming request's method and URI in `info` level
+// LoggerMiddleware logs incoming request's method and URI in `info` level.
 func (server Server) LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		server.Info("Received request", "method", r.Method, "uri", r.URL.Path)

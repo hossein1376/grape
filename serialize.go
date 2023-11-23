@@ -18,7 +18,7 @@ type serializer interface {
 
 type serialize struct{}
 
-// WriteJson will write back the data in json with the provided status code and headers.
+// WriteJson will write back data in json format with the provided status code and headers.
 func (serialize) WriteJson(w http.ResponseWriter, status int, data any, headers http.Header) error {
 	js, err := json.Marshal(data)
 	if err != nil {

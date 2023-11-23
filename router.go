@@ -4,44 +4,44 @@ import (
 	"net/http"
 )
 
+// Router embeds *http.ServeMux, adding helper functions such as Get, Post, Use and others.
 type Router struct {
 	local  []func(http.Handler) http.Handler
 	global []func(http.Handler) http.Handler
 	*http.ServeMux
 }
 
-// NewRouter will initialize a router of type Router which embeds type ServeMux,
-// with added helper functions such ad Get, Post, Use and others.
+// NewRouter will initialize a new router of type Router.
 func NewRouter() *Router {
 	return &Router{ServeMux: http.NewServeMux()}
 }
 
-// Get calls Method with http.MethodGet
+// Get calls Method with http.MethodGet.
 func (r *Router) Get(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodGet, route, handler)
 }
 
-// Post calls Method with http.MethodPost
+// Post calls Method with http.MethodPost.
 func (r *Router) Post(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodPost, route, handler)
 }
 
-// Put calls Method with http.MethodPut
+// Put calls Method with http.MethodPut.
 func (r *Router) Put(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodPut, route, handler)
 }
 
-// Patch calls Method with http.MethodPatch
+// Patch calls Method with http.MethodPatch.
 func (r *Router) Patch(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodPatch, route, handler)
 }
 
-// Delete calls Method with http.MethodDelete
+// Delete calls Method with http.MethodDelete.
 func (r *Router) Delete(route string, handler http.HandlerFunc) {
 	r.Method(http.MethodDelete, route, handler)
 }
 
-// Method accept a http method, route and handler
+// Method accept a http method, route and one handler.
 func (r *Router) Method(method, route string, handler http.HandlerFunc) {
 	r.Handle(method+" "+route, r.withMiddlewares(handler))
 }
@@ -58,7 +58,9 @@ func (r *Router) UseAll(middlewares ...func(http.Handler) http.Handler) {
 	r.global = append(r.global, middlewares...)
 }
 
-// Serve will start the server on the provided address. It takes an optional argument to modify the server's configurations.
+// Serve will start the server on the provided address.
+// It takes an optional argument to modify the http.Server's configurations.
+// Note that two fields Addr and Handler are populated by the function and should not be provided.
 func (r *Router) Serve(addr string, server ...*http.Server) error {
 	var h http.Handler = r
 	for _, middleware := range r.global {

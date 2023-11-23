@@ -28,7 +28,7 @@ Your contributions must follow these conventions:
 7. Tests and examples must be updated as well, if applicable.
 8. Before adding a feature, ask yourself: "Is this something I expect to see in the standard library?" If you believe it
    is, then proceed.
-9. Keep git commits small and isolated, with a clear message stating what happened. Starting with an uppercase verb.
+9. Keep git commits small and isolated; with a clear message stating what happened and starting with a capital verb.
 10. Each commit must be compilable on its own.
 
 ## Notice

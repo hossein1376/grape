@@ -4,6 +4,8 @@ import (
 	"log/slog"
 )
 
+// logger is a wrapper struct around slog.Logger, exposing only handful APIs such as Info or Error.
+// This is an intentional design decision to tune down the number of available methods on Server.
 type logger struct {
 	slog *slog.Logger
 }

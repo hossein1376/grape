@@ -7,17 +7,19 @@ import (
 	"strconv"
 )
 
-// Map is an alias for `map[string]any` and can be used for json responses
+// Map is an alias type and is intended for json response marshalling.
 type Map = map[string]any
 
-// Server is main entrypoint of Grape. It needs to be included in the same struct that your handlers are a receiver function to
+// Server is main struct of Grape with three embedded private types; logger, serializer and response.
+// It should be included in the same struct that your handlers are a receiver function to.
 type Server struct {
 	logger
 	serializer
 	response
 }
 
-// Options is used to customize Grape's settings. If a field is not provided, default will be used instead.
+// Options is used to customize Grape's settings, namely Log and Serialize.
+// If a field is not provided, the default will be used instead.
 type Options struct {
 	Log       *slog.Logger
 	Serialize serializer
@@ -31,7 +33,7 @@ var defaultOptions = Options{
 }
 
 // New return an instance of grape.Server to be included in structs.
-// It optionally, accept grape.Option to customize Grape's settings.
+// It optionally accepts grape.Option to customize Grape's settings.
 func New(opts ...Options) Server {
 	var opt Options
 	if len(opts) == 0 {
@@ -55,8 +57,8 @@ func New(opts ...Options) Server {
 	}
 }
 
-// ParamInt extracts the parameter by name from the request and converts it to integer.
-// It will return 0 if no parameter was found or there was an error converting it to int.
+// ParamInt extracts the parameter by its name from request and converts it to integer.
+// It will return 0 if no parameter was found, or there was an error converting it to int.
 func (server Server) ParamInt(r *http.Request, name string) int {
 	param, err := strconv.Atoi(r.PathValue(name))
 	if err != nil {
@@ -65,8 +67,8 @@ func (server Server) ParamInt(r *http.Request, name string) int {
 	return param
 }
 
-// ParamInt64 extracts the parameter by name from the request and converts it to integer.
-// It will return 0 if no parameter was found or there was an error converting it to int64.
+// ParamInt64 extracts the parameter by its name from request and converts it to integer.
+// It will return 0 if no parameter was found, or there was an error converting it to int64.
 func (server Server) ParamInt64(r *http.Request, name string) int64 {
 	param, err := strconv.ParseInt(r.PathValue(name), 10, 64)
 	if err != nil {
