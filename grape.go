@@ -1,3 +1,4 @@
+// Package grape is a modern, zero-dependency HTTP library for Go.
 package grape
 
 import (
@@ -11,7 +12,8 @@ import (
 type Map = map[string]any
 
 // Server is main struct of Grape with three embedded private types; logger, serializer and response.
-// It should be included in the same struct that your handlers are a receiver function to.
+// It should be included in the same struct that your handlers are a method to,
+// so the helper methods are accessible through the receiver.
 type Server struct {
 	logger
 	serializer
