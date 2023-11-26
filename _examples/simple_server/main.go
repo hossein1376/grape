@@ -25,8 +25,8 @@ func main() {
 	// Define your routes
 	r.UseAll(h.LoggerMiddleware, h.RecoverMiddleware)
 	r.Get("/", h.rootHandler)
-	r.Post("/ping", h.pingHandler)
-	r.Put("/{id}", h.parameterHandler)
+	r.Post("/{id}", h.parameterHandler)
+	r.Put("/ping", h.pingHandler)
 
 	h.Info("starting server on port 3000...")
 	err := r.Serve(":3000")
@@ -37,8 +37,17 @@ func main() {
 }
 
 func (h *handler) rootHandler(w http.ResponseWriter, _ *http.Request) {
-	h.Warn("Get request on root")
+	h.Debug("Get request on root")
 	h.OkResponse(w, "Hello, World!")
+}
+
+func (h *handler) parameterHandler(w http.ResponseWriter, r *http.Request) {
+	id := h.ParamInt(r, "id")
+	if id == 0 {
+		h.NotFoundResponse(w)
+		return
+	}
+	h.CreatedResponse(w, grape.Map{"id": id})
 }
 
 func (h *handler) pingHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,15 +62,6 @@ func (h *handler) pingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Debug("ping handler", "request", req.Ping)
+	h.Warn("ping handler", "request", req.Ping)
 	h.NoContentResponse(w)
-}
-
-func (h *handler) parameterHandler(w http.ResponseWriter, r *http.Request) {
-	id := h.ParamInt(r, "id")
-	if id == 0 {
-		h.NotFoundResponse(w)
-		return
-	}
-	h.CreatedResponse(w, grape.Map{"id": id})
 }
