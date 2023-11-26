@@ -2,6 +2,7 @@ package validator
 
 import (
 	"cmp"
+	"reflect"
 	"regexp"
 	"testing"
 )
@@ -548,6 +549,77 @@ func TestUnique(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Unique(tt.values); got != tt.want {
 				t.Errorf("Unique() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNew(t *testing.T) {
+	tests := []struct {
+		name string
+		want *Validator
+	}{
+		{
+			name: "Create new Validator instance",
+			want: &Validator{Errors: make(map[string]string)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := New(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidator_Check_Valid(t *testing.T) {
+	tests := []struct {
+		name   string
+		Errors map[string]string
+		key    string
+		cases  []Case
+
+		valid    bool
+		errorNum int
+	}{
+		{
+			name:   "All checks pass",
+			Errors: make(map[string]string),
+			key:    "Field",
+			cases: []Case{{
+				Cond: true,
+				Msg:  "this should not happen",
+			}},
+			valid:    true,
+			errorNum: 0,
+		},
+		{
+			name:   "One checks fails",
+			Errors: make(map[string]string),
+			key:    "Field",
+			cases: []Case{{
+				Cond: false,
+				Msg:  "this happened",
+			}},
+			valid:    false,
+			errorNum: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &Validator{
+				Errors: tt.Errors,
+			}
+			v.Check(tt.key, tt.cases...)
+
+			if len(v.Errors) != tt.errorNum {
+				t.Errorf("expected %d errors, got %d", tt.errorNum, len(v.Errors))
+			}
+			if v.Valid() != tt.valid {
+				t.Errorf("expected validation to be %v, got %v", tt.valid, v.Valid())
 			}
 		})
 	}
