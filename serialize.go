@@ -20,17 +20,22 @@ type serialize struct{}
 
 // WriteJson will write back data in json format with the provided status code and headers.
 func (serialize) WriteJson(w http.ResponseWriter, status int, data any, headers http.Header) error {
-	js, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
 	for key, value := range headers {
 		w.Header()[key] = value
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Date", time.Now().Format(http.TimeFormat))
+
+	if data == nil {
+		w.WriteHeader(status)
+		return nil
+	}
+
+	js, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
 
 	w.WriteHeader(status)
 	_, err = w.Write(js)
