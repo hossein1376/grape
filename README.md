@@ -25,8 +25,8 @@ go get -u github.com/hossein1376/grape@latest
 
 ## Usage
 
-Main philosophy is to embed Grape into the struct which handlers are a method to it, right next to some other fields
-like models, setting etc.  
+Main philosophy is to embed Grape into the struct which handlers are a method to it, next to other fields like models,
+settings, etc.  
 In this approach, instead of changing handlers' argument to accept a specific context;
 all the helper methods are available through the receiver.
 
@@ -52,7 +52,7 @@ func main() {
 	r := grape.NewRouter()            // grape.Router for routing and starting the server 
 
 	r.UseAll(h.LoggerMiddleware, h.RecoverMiddleware)
-	r.Put("/{id}", h.pingHandler)
+	r.Get("/{id}", h.pingHandler)
 
 	if err := r.Serve(":3000"); err != nil {
 		h.Error("failed to start server", "error", err)
@@ -79,8 +79,8 @@ It is possible customize Grape for different use-cases. You can see more inside 
 ## Why?
 
 Go standard library is awesome. It's fast, easy to use, and has a great API.  
-With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, in most cases there are not many reasons
-to look any further.
+With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, there are not many reasons to look any
+further in most cases.
 Instead of breaking compatibility with net/http, Grape aims to add commonly used functions within the arm's reach of the
 handlers.
 
