@@ -15,7 +15,7 @@ func main() {
 	h := handler{Server: grape.New()}
 	r := grape.NewRouter()
 
-	r.UseAll(h.LoggerMiddleware, h.RecoverMiddleware)
+	r.Use(h.LoggerMiddleware, h.RecoverMiddleware)
 	r.Post("/users", h.createUserHandler)
 
 	h.Info("starting server on port 3000...")
@@ -57,6 +57,6 @@ func (h *handler) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Info("ping handler", "request", req)
+	h.Info("create user handler", "request", req)
 	h.CreatedResponse(w, req)
 }
