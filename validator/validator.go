@@ -16,15 +16,31 @@ type Case struct {
 	Msg  string
 }
 
+// ValidationError holds all validation error messages. It implements error interface.
+type ValidationError map[string][]string
+
+// Error returns validation errors in the following format:
+//
+//	"field_1: validation error, field_2: first error"
+func (v ValidationError) Error() string {
+	var s []string
+	for key, value := range v {
+		for _, msg := range value {
+			s = append(s, key+": "+msg)
+		}
+	}
+	return strings.Join(s, ", ")
+}
+
 // Validator will check for cases by Check method and will return a boolean with Valid method.
 // If a validation error happens, the Msg will be stored inside the Errors map.
 type Validator struct {
-	Errors map[string]string `json:"errors"`
+	Errors ValidationError `json:"errors"`
 }
 
 // New will return an instance of Validator.
 func New() *Validator {
-	return &Validator{Errors: make(map[string]string)}
+	return &Validator{Errors: make(map[string][]string)}
 }
 
 // Valid returns a boolean indicating whether validation was successful or not.
@@ -42,9 +58,7 @@ func (v *Validator) Check(key string, cases ...Case) {
 }
 
 func (v *Validator) addError(key, message string) {
-	if _, exists := v.Errors[key]; !exists {
-		v.Errors[key] = message
-	}
+	v.Errors[key] = append(v.Errors[key], message)
 }
 
 // Empty checks if a string is empty.

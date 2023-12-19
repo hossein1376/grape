@@ -54,6 +54,8 @@ func (h *handler) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	if ok := v.Valid(); !ok {
 		h.Response(w, http.StatusBadRequest, v.Errors)
+		// since v.Errors implements error interface, you can do this as well: (with slightly different output format)
+		// h.BadRequestResponse(w, v.Errors)
 		return
 	}
 
