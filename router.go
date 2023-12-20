@@ -2,18 +2,49 @@ package grape
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 )
 
-// Router embeds *http.ServeMux, adding helper functions such as Get, Post, Use and others.
+// Router provides methods such as Get, Post and Use (among others) for routing.
 type Router struct {
-	local  []func(http.Handler) http.Handler
+	scope       string
+	routes      map[string]http.Handler
+	middlewares []func(http.Handler) http.Handler
+	base        *base
+}
+
+type base struct {
 	global []func(http.Handler) http.Handler
-	*http.ServeMux
+	routes map[string]*Router
 }
 
 // NewRouter will initialize a new router of type Router.
+// This function is expected to be called only once. Subsequent sub-path Router instance are created by the Group method.
 func NewRouter() *Router {
-	return &Router{ServeMux: http.NewServeMux()}
+	rt := &Router{
+		routes: make(map[string]http.Handler),
+		base: &base{
+			global: make([]func(http.Handler) http.Handler, 0),
+			routes: make(map[string]*Router),
+		},
+	}
+	rt.base.routes[""] = rt
+	return rt
+}
+
+// Group creates a new Router instance from the current one, inheriting scope and middlewares.
+func (r *Router) Group(prefix string) *Router {
+	newScope := r.scope + prefix
+	newRouter := &Router{
+		scope:       newScope,
+		routes:      make(map[string]http.Handler),
+		middlewares: r.middlewares,
+		base:        r.base,
+	}
+
+	r.base.routes[newScope] = newRouter
+	return newRouter
 }
 
 // Get calls Method with http.MethodGet.
@@ -42,28 +73,56 @@ func (r *Router) Delete(route string, handler http.HandlerFunc) {
 }
 
 // Method accept a http method, route and one handler.
+// As a bonus, if the provided route has a trailing slash, it disables net/http's default catch-all behaviour.
 func (r *Router) Method(method, route string, handler http.HandlerFunc) {
-	r.Handle(method+" "+route, r.withMiddlewares(handler))
+	if strings.HasSuffix(route, "/") {
+		route += "{$}"
+	}
+
+	rt := r.base.routes[r.scope]
+	rt.routes[method+" "+r.scope+route] = r.withMiddlewares(handler)
 }
 
 // Use add middlewares to the routes that are defined after it.
 // Note that declared middlewares won't be applied to the previous routes or the default handlers such as NotFound or MethodNotAllowed.
 func (r *Router) Use(middlewares ...func(http.Handler) http.Handler) {
-	r.local = append(r.local, middlewares...)
+	// To set correct middlewares order, and in regard to `withMiddlewares`
+	// method, the order will be in reverse of the middlewares slice.
+	// Meaning, the first middleware to run must be the last one to apply.
+	// To achieve that, the last defined middleware should be the first one
+	// in the slice.
+	//
+	// Another approach was to reverse middlewares before applying them.
+
+	slices.Reverse(middlewares)
+	r.middlewares = slices.Concat(middlewares, r.middlewares)
 }
 
 // UseAll will add declared middleware to all the handlers.
 // No matter defined before or after it; as well as the default handlers such as NotFound or MethodNotAllowed.
+//
+// These middlewares will take precedence over all other middlewares on the same scope and path.
 func (r *Router) UseAll(middlewares ...func(http.Handler) http.Handler) {
-	r.global = append(r.global, middlewares...)
+	// Refer to `Use` method for documentation.
+	slices.Reverse(middlewares)
+	r.base.global = slices.Concat(middlewares, r.base.global)
 }
 
-// Serve will start the server on the provided address.
+// Serve will start the server on the provided address. It makes no difference on which instance of Router this method
+// is called from.
+//
 // It takes an optional argument to modify the http.Server's configurations.
-// Note that two fields Addr and Handler are populated by the function and should not be provided.
+// Note that two fields Addr and Handler are populated by the function and will be ignored if provided.
 func (r *Router) Serve(addr string, server ...*http.Server) error {
-	var h http.Handler = r
-	for _, middleware := range r.global {
+	handler := &http.ServeMux{}
+	for _, rt := range r.base.routes {
+		for path, handle := range rt.routes {
+			handler.Handle(path, handle)
+		}
+	}
+
+	var h http.Handler = handler
+	for _, middleware := range r.base.global {
 		h = middleware(h)
 	}
 
@@ -77,7 +136,7 @@ func (r *Router) Serve(addr string, server ...*http.Server) error {
 }
 
 func (r *Router) withMiddlewares(handler http.Handler) http.Handler {
-	for _, middleware := range r.local {
+	for _, middleware := range r.middlewares {
 		handler = middleware(handler)
 	}
 	return handler

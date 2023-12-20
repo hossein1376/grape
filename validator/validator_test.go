@@ -561,7 +561,7 @@ func TestNew(t *testing.T) {
 	}{
 		{
 			name: "Create new Validator instance",
-			want: &Validator{Errors: make(map[string]string)},
+			want: &Validator{Errors: make(map[string][]string)},
 		},
 	}
 
@@ -577,7 +577,7 @@ func TestNew(t *testing.T) {
 func TestValidator_Check_Valid(t *testing.T) {
 	tests := []struct {
 		name   string
-		Errors map[string]string
+		Errors map[string][]string
 		key    string
 		cases  []Case
 
@@ -586,7 +586,7 @@ func TestValidator_Check_Valid(t *testing.T) {
 	}{
 		{
 			name:   "All checks pass",
-			Errors: make(map[string]string),
+			Errors: make(map[string][]string),
 			key:    "Field",
 			cases: []Case{{
 				Cond: true,
@@ -597,7 +597,7 @@ func TestValidator_Check_Valid(t *testing.T) {
 		},
 		{
 			name:   "One checks fails",
-			Errors: make(map[string]string),
+			Errors: make(map[string][]string),
 			key:    "Field",
 			cases: []Case{{
 				Cond: false,
@@ -622,5 +622,53 @@ func TestValidator_Check_Valid(t *testing.T) {
 				t.Errorf("expected validation to be %v, got %v", tt.valid, v.Valid())
 			}
 		})
+	}
+}
+
+func TestValidationError_Error(t *testing.T) {
+	tests := []struct {
+		name string
+		v    ValidationError
+		want string
+	}{
+		{
+			name: "Empty Input",
+			v:    ValidationError{},
+			want: "",
+		},
+		{
+			name: "One field",
+			v:    ValidationError{"field_1": []string{"validation error"}},
+			want: "field_1: validation error",
+		},
+		{
+			name: "Two fields",
+			v: ValidationError{
+				"field_1": []string{"validation error"},
+				"field_2": []string{"validation error", "validation error"},
+			},
+			want: "field_1: validation error, field_2: validation error, field_2: validation error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.v.Error(); got != tt.want {
+				t.Errorf("Error() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkValidationError(b *testing.B) {
+	v := ValidationError{
+		"field_1": []string{"validation error"},
+		"field_2": []string{"validation error", "validation error"},
+		"field_3": []string{"validation error", "validation error", "validation error"},
+		"field_4": []string{"validation error", "validation error"},
+		"field_5": []string{"validation error"},
+	}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		v.Error()
 	}
 }
