@@ -23,6 +23,8 @@ func (h *handler) createPermitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) getPermitByID(w http.ResponseWriter, r *http.Request) {
+	h.Debug("getPermitByID handler")
+
 	pid := h.ParamInt64(r, "pid")
 	if pid == 0 {
 		h.Info("get_permit_handler", "error", "invalid parameter")

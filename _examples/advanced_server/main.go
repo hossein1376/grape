@@ -16,14 +16,19 @@ type handler struct {
 }
 
 func main() {
-	// Any valid *slog.Logger will do! You can configure the destination, log format, level and more.
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	var logOption grape.Logger
+	// Any valid grape.Logger will do! Since *slog.Logger implements it as well, it can be seamlessly used.
+	logOption = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-	// Any valid grape.serializer will do! (check out serializer.go for the implementation).
-	serializer := Jsoniter{}
+	// Or rather, create a custom type that implements grape.Logger with packages of your choice.
+	// (check out logger.go for the implementation)
+	// logOption = newLogger()
 
-	// If you don't provide a field, default value (grape.defaultOptions) will be used.
-	opts := grape.Options{Log: logger, Serialize: serializer}
+	// Any valid grape.Serializer will do! (check out serializer.go for the implementation).
+	serializeOption := newSerializer()
+
+	// If you don't provide a field, default value will be used.
+	opts := grape.Options{Log: logOption, Serialize: serializeOption}
 
 	// Instantiate the grape.Server inside your struct of choice.
 	h := handler{
