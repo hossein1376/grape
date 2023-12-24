@@ -12,7 +12,7 @@ Adding only a single dependency to your projects.
 - Using new, improved [net/http](https://pkg.go.dev/net/http) router
 - Group routes and scope-specific middlewares
 - Read and write json via the [encoding/json](https://pkg.go.dev/encoding/json)
-- Customizable with different `slog` configurations; bring your own serializer!
+- Highly customizable; bring your own logger and serializer!
 - Helper functions for commonly used HTTP status code responses
 - Featuring a built-in `validator` package for data validation
 
@@ -79,17 +79,20 @@ It is possible customize Grape for different use-cases. You can view more inside
 
 ## Composability
 
-Grape consists of several components independent of each other. Giving developers opt-in choice of features.
+Grape consists of several components independent of each other. Giving developers **opt-in choice of features**.
 
 ### `grape.Server`
 
-Providing methods for logging, interacting with json, common HTTP responses and some other useful utilities.  
-An instance of it is created by running `grape.New()`. It can be embedded inside a struct, placed as a regular field,
-or even being passed around through the context.
+Providing methods for logging, interacting with json, common HTTP responses and some other useful utilities. 
+It can be embedded inside a struct, placed as a regular field, instantiate as a global variable,
+or even being passed around through the context.  
+An instance of it is created by running `grape.New()` and its behaviour is customizable by passing `grape.Options` 
+as an argument.
 
 ### `*grape.Router`
 
-Enable routing via methods named after HTTP verbs, with route grouping and scope-specific middlewares.  
+Enable routing via methods named after HTTP verbs, with route grouping and scope-specific middlewares.
+Create a new instance by running `grape.NewRouter()`.  
 All routes are registered on server's startup and the rest is handled by the standard library,
 causing zero runtime overhead.
 

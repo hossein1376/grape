@@ -49,21 +49,22 @@ func (h *handler) parameterHandler(w http.ResponseWriter, r *http.Request) {
 		h.NotFoundResponse(w)
 		return
 	}
-	h.CreatedResponse(w, grape.Map{"id": id})
+	h.CreatedResponse(w, id)
 }
 
 func (h *handler) pingHandler(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		Ping string `json:"ping"`
+		Data string `json:"data"`
 	}
 
 	var req request
 	err := h.ReadJson(w, r, &req)
 	if err != nil {
+		h.Error("ping handler", "error reading request", err)
 		h.BadRequestResponse(w, err)
 		return
 	}
 
-	h.Warn("ping handler", "request", req.Ping)
-	h.NoContentResponse(w)
+	h.Info("ping handler", "request", req.Data)
+	h.OkResponse(w, grape.Map{"ping": "pong", "data": req.Data})
 }

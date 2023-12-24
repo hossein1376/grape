@@ -5,12 +5,12 @@ import (
 )
 
 type response struct {
-	logger
-	serializer
+	Logger
+	Serializer
 }
 
-func newResponse(logger logger, json serializer) response {
-	return response{logger: logger, serializer: json}
+func newResponse(logger Logger, json Serializer) response {
+	return response{Logger: logger, Serializer: json}
 }
 
 type resp struct {
@@ -18,7 +18,7 @@ type resp struct {
 }
 
 // Response is a general function which responses with the provided message and status code,
-// it will return 500 if case of failure.
+// it will return 500 in case of failure.
 func (res response) Response(w http.ResponseWriter, statusCode int, message any) {
 	err := res.WriteJson(w, statusCode, message, nil)
 	if err != nil {
