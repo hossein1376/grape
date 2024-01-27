@@ -1,0 +1,22 @@
+# Enable all linters except the deprecated and annoying ones
+linters:
+  enable-all: true
+  disable:
+    # Deprecated
+    - nosnakecase
+    - exhaustivestruct
+    - varcheck
+    - interfacer
+    - structcheck
+    - maligned
+    - scopelint
+    - ifshort
+    - golint
+    - deadcode
+    # Disable for now and decide if it is worth to support them
+    - varnamelen
+    - paralleltest
+    - gochecknoglobals
+    - funlen
+    - lll
+    - wsl
