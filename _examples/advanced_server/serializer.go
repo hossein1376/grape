@@ -26,6 +26,7 @@ func (serializer) WriteJson(w http.ResponseWriter, status int, data any, _ http.
 	_, err = w.Write(js)
 	return err
 }
+
 func (serializer) ReadJson(_ http.ResponseWriter, r *http.Request, dst any) error {
 	dec := jsoniter.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
