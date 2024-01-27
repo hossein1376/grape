@@ -8,7 +8,7 @@ help: ## Print this help message
 	@echo "";
 
 .PHONY: lint
-lint: ## Lint the code and look for usual errors
+lint: ## Lint the code and look for common errors
 	golangci-lint run
 
 .PHONY: fmt
