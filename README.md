@@ -64,8 +64,8 @@ func main() {
 func (h *handler) paramHandler(w http.ResponseWriter, r *http.Request) {
 	h.Info("Param handler!")
 
-	id := h.ParamInt(r, "id")
-	if id == 0 {
+	id, err := h.ParamInt(r, "id")
+	if err != nil {
 		h.NotFoundResponse(w)
 		return
 	}

@@ -44,8 +44,8 @@ func (h *handler) rootHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *handler) parameterHandler(w http.ResponseWriter, r *http.Request) {
-	id := h.ParamInt(r, "id")
-	if id == 0 {
+	id, err := h.ParamInt(r, "id")
+	if err != nil {
 		h.NotFoundResponse(w)
 		return
 	}
