@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 )
 
 // Router provides methods such as Get, Post and Use (among others) for routing.
@@ -126,7 +127,12 @@ func (r *Router) Serve(addr string, server ...*http.Server) error {
 		h = middleware(h)
 	}
 
-	srv := &http.Server{}
+	srv := &http.Server{
+		// A good value between Apache's and Nginx's defaults
+		// https://nginx.org/en/docs/http/ngx_http_core_module.html#client_header_timeout
+		// https://httpd.apache.org/docs/2.4/mod/directive-dict.html#Default
+		ReadHeaderTimeout: time.Second * 45,
+	}
 	if len(server) != 0 {
 		srv = server[0]
 	}
