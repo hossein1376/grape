@@ -98,3 +98,17 @@ func (server Server) ParamInt64(r *http.Request, name string) (int64, error) {
 	}
 	return param, nil
 }
+
+// Go spawns a new goroutine and will recover in case of panic; logging the error message in Error level.
+// Using this function ensures that panic in goroutines will not stop the application's execution.
+func (server Server) Go(f func()) {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				server.Error("goroutine panic recovered", "error", err)
+			}
+		}()
+
+		f()
+	}()
+}
