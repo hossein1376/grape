@@ -115,6 +115,22 @@ func (r *Router) UseAll(middlewares ...func(http.Handler) http.Handler) {
 // It takes an optional argument to modify the http.Server's configurations.
 // Note that two fields Addr and Handler are populated by the function and will be ignored if provided.
 func (r *Router) Serve(addr string, server ...*http.Server) error {
+	srv := r.newServer(addr, server)
+	return srv.ListenAndServe()
+}
+
+// ServeTLS will start a TLS server on the provided address. Same as the Serve method, it makes no difference on which
+// instance of Router this method is called from.
+//
+// Certificate and private key files must be passed as second and third arguments. It takes an optional argument to
+// modify the http.Server's configurations as well.
+// Note that two fields Addr and Handler are populated by the function and will be ignored if provided.
+func (r *Router) ServeTLS(addr string, certFile string, keyFile string, server ...*http.Server) error {
+	srv := r.newServer(addr, server)
+	return srv.ListenAndServeTLS(certFile, keyFile)
+}
+
+func (r *Router) newServer(addr string, server []*http.Server) *http.Server {
 	handler := &http.ServeMux{}
 	for _, rt := range r.base.routes {
 		for path, handle := range rt.routes {
@@ -138,7 +154,7 @@ func (r *Router) Serve(addr string, server ...*http.Server) error {
 	}
 	srv.Addr, srv.Handler = addr, h
 
-	return srv.ListenAndServe()
+	return srv
 }
 
 func (r *Router) withMiddlewares(handler http.Handler) http.Handler {
