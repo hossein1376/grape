@@ -108,8 +108,3 @@ With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, in
 to look any further.
 Instead of breaking compatibility with net/http, Grape aims to add commonly used functions within the arm's reach of the
 handlers.
-
-## Note
-
-Grape is still under development. My goal is to have a stable version before release of go 1.22.  
-If you're interested, make sure to read [contributing](/CONTRIBUTING.md) document first. I appreciate all inputs :)
