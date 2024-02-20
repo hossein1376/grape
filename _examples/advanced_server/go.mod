@@ -5,7 +5,7 @@ go 1.22
 replace github.com/hossein1376/grape => ../../
 
 require (
-	github.com/hossein1376/grape v0.2.0
+	github.com/hossein1376/grape v0.3.0
 	github.com/json-iterator/go v1.1.12
 )
 
