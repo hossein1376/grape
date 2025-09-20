@@ -102,6 +102,10 @@ func defaultReadOptions() *readOptions {
 func ReadJson(
 	w http.ResponseWriter, r *http.Request, dst any, opts ...ReadOpts,
 ) error {
+	if strings.ToLower(r.Header.Get("content-type")) != "application/json" {
+		return errors.New("content type is not application/json")
+	}
+
 	opt := defaultReadOptions()
 	for _, o := range opts {
 		o(opt)
