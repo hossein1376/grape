@@ -7,77 +7,66 @@ import (
 	"time"
 
 	"github.com/hossein1376/grape"
+	"github.com/hossein1376/grape/slogger"
 )
 
-type handler struct {
-	// data/models
-	// settings
-	grape.Server
-}
-
 func main() {
-	var logOption grape.Logger
-	// Any valid grape.Logger will do! Since *slog.Logger implements it as well, it can be seamlessly used.
-	logOption = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := slogger.New(
+		slogger.WithLevel(slog.LevelDebug),
+		slogger.WithDestination(os.Stdout),
+		slogger.WithAddSource(),
+		slogger.WithTextLogger(),
+	)
+	// You can use slogger.NewDefault too
+	slog.SetDefault(logger)
 
-	// Or rather, create a custom type that implements grape.Logger with packages of your choice.
-	// (check out logger.go for the implementation)
-	// logOption = newLogger()
+	// Routes can be defined in a separate function
+	r := router()
 
-	// Any valid grape.Serializer will do! (check out serializer.go for the implementation).
-	serializeOption := newSerializer()
+	logger.Info("starting server on port 3000...")
 
-	// If you don't provide a field, default value will be used.
-	opts := grape.Options{Log: logOption, Serialize: serializeOption}
-
-	// Instantiate the grape.Server inside your struct of choice.
-	h := handler{
-		// Models: models.New()
-		// Settings: settings.Get()
-		Server: grape.New(opts),
-	}
-
-	// Routes can be defined in a separate function.
-	r := h.router()
-
-	h.Info("starting server on port 3000...")
-
-	// You can optionally pass an instance of *http.Server to configure the running settings.
-	// Note that two fields `Addr` and `Handler` are set by the Serve method. If provided, they'll be ignored.
+	// Router implements
 	srv := &http.Server{
+		Handler:      r,
+		Addr:         ":3000",
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	err := r.Serve(":3000", srv)
+	err := srv.ListenAndServe()
 	if err != nil {
-		h.Error("failed to start server", "error", err)
+		logger.Error("failed to start server", slogger.Err("error", err))
 	}
 }
 
-func (h *handler) router() *grape.Router {
+func router() *grape.Router {
 	// Create an instance of the router.
 	r := grape.NewRouter()
 
 	// Define middlewares to be used by all endpoints.
-	r.Use(h.LoggerMiddleware, h.RecoverMiddleware)
+	r.Use(
+		grape.RequestIDMiddleware,
+		grape.RecoverMiddleware,
+		grape.LoggerMiddleware,
+		grape.CORSMiddleware,
+	)
 
 	// if you want the middleware to affect default handlers such as NotFound or MethodNotAllowed as well, use UseAll.
 	// r.UseAll(h.LoggerMiddleware)
 
-	r.Post("/login", h.authHandler)
+	r.Post("/login", authHandler)
 
 	// Previously declared endpoints will not be impacted by these middlewares.
-	r.Use(h.checkAuth)
+	r.Use(checkAuth)
 
 	permits := r.Group("/permits")
-	permits.Post("/", h.createPermitHandler)
-	permits.Get("/{pid}", h.getPermitByID)
+	permits.Post("/", createPermitHandler)
+	permits.Get("/{pid}", getPermitByID)
 
 	users := permits.Group("/users") // /permits/users/
-	users.Use(h.usersMiddleware)     // scope specific middleware
-	users.Get("/", h.getUserPermits)
+	users.Use(usersMiddleware)       // scope specific middleware
+	users.Get("/", getUserPermits)
 
 	return r
 }

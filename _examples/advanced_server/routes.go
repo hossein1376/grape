@@ -4,41 +4,45 @@ import (
 	"net/http"
 
 	"github.com/hossein1376/grape"
+	"github.com/hossein1376/grape/errs"
+	"github.com/hossein1376/grape/slogger"
 )
 
-func (h *handler) createPermitHandler(w http.ResponseWriter, r *http.Request) {
+func createPermitHandler(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		Name string `json:"name"`
 	}
+	ctx := r.Context()
 
 	var req request
-	err := h.ReadJson(w, r, &req)
+	err := grape.ReadJson(w, r, &req)
 	if err != nil {
-		h.Info("create_permit_handler", "error", err)
-		h.BadRequestResponse(w, err)
+		slogger.Info(ctx, "reda request", slogger.Err("error", err))
+		err = errs.BadRequest(err)
 		return
 	}
 
-	h.CreatedResponse(w, grape.Map{"name": req.Name})
+	grape.Respond(ctx, w, http.StatusCreated, grape.Map{"name": req.Name})
 }
 
-func (h *handler) getPermitByID(w http.ResponseWriter, r *http.Request) {
-	h.Debug("getPermitByID handler")
+func getPermitByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	slogger.Debug(ctx, "getPermitByID handler")
 
-	pid, err := h.ParamInt64(r, "pid")
+	pid, err := grape.Param(r, "pid", grape.ParseInt64)
 	if err != nil {
-		h.Info("get_permit_handler", "error", "invalid parameter")
-		h.NotFoundResponse(w)
+		slogger.Info(ctx, "invalid parameter", slogger.Err("error", err))
+		err = errs.BadRequest(err, errs.WithMsg("invalid id"))
 		return
 	}
 
-	h.CreatedResponse(w, grape.Map{"id": pid})
+	grape.Respond(ctx, w, http.StatusCreated, grape.Map{"id": pid})
 }
 
-func (h *handler) getUserPermits(w http.ResponseWriter, _ *http.Request) {
-	h.Response(w, http.StatusOK, "users endpoint") // equivalent of using h.OkResponse()
+func getUserPermits(w http.ResponseWriter, r *http.Request) {
+	grape.Respond(r.Context(), w, http.StatusOK, "users endpoint")
 }
 
-func (h *handler) authHandler(w http.ResponseWriter, _ *http.Request) {
-	h.OkResponse(w, "login endpoint")
+func authHandler(w http.ResponseWriter, r *http.Request) {
+	grape.Respond(r.Context(), w, http.StatusOK, "login endpoint")
 }

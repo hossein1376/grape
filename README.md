@@ -2,8 +2,9 @@
 
 Grape is a modern, zero-dependency HTTP library for Go.
 
-It's a thin wrapper around the standard library, providing helper functions to facilitate faster and easier development.
-Adding only a single dependency to your projects.
+It's a thin wrapper around the standard library, providing helper functions to
+facilitate faster and easier development. Adding only a single dependency to
+your projects.
 
 ## Features
 
@@ -18,7 +19,7 @@ Adding only a single dependency to your projects.
 
 ## Installation
 
-You need Go version 1.22 or higher.
+You need Go version 1.25 or higher.
 
 ```shell
 go get -u github.com/hossein1376/grape@latest
@@ -26,85 +27,94 @@ go get -u github.com/hossein1376/grape@latest
 
 ## Usage
 
-Main usage pattern is to embed Grape into the struct which handlers are a method to it, next to other fields like
-models, settings, etc.  
-In this approach, instead of changing handlers' argument to accept a specific context;
-all the helper methods are available through the receiver.
-
-The following is a simple example. For more, check out the [examples](/_examples) directory.
+The following is a simple example. For more, check out the [examples](/_examples)
+directory.
 
 ```go
 package main
 
 import (
+	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/hossein1376/grape"
+	"github.com/hossein1376/grape/errs"
+	"github.com/hossein1376/grape/slogger"
 )
 
-type handler struct {
-	// data/models
-	// settings
-	grape.Server
-}
-
 func main() {
-	h := handler{Server: grape.New()} // grape.Server inside a struct
-	r := grape.NewRouter()            // grape.Router for routing and starting the server 
+	// Create new default logger for all calls to `slog` and `log` packages
+	logger := slogger.NewDefault(slogger.WithLevel(slog.LevelDebug))
+	// grape.Router for routing and starting the server
+	r := grape.NewRouter()
 
-	r.Use(h.LoggerMiddleware, h.RecoverMiddleware)
-	r.Get("/{id}", h.paramHandler)
+	r.Use(
+		grape.RequestIDMiddleware,
+		grape.RecoverMiddleware,
+		grape.LoggerMiddleware,
+		grape.CORSMiddleware,
+	)
+	r.Get("/{id}", paramHandler)
 
-	if err := r.Serve(":3000"); err != nil {
-		h.Error("failed to start server", "error", err)
+	srv := &http.Server{Addr: ":3000", Handler: r}
+	// Alternatively, calling r.Serve(":3000", nil) will do the same thing
+	if err := srv.ListenAndServe(); err != nil {
+		logger.Error("start server failure", slogger.Err("error", err))
 		return
 	}
 }
 
-func (h *handler) paramHandler(w http.ResponseWriter, r *http.Request) {
-	h.Info("Param handler!")
+func paramHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	slogger.Info(ctx, "Param handler!")
 
-	id, err := h.ParamInt(r, "id")
+	// id is extracted and parsed into int
+	id, err := grape.Param(r, "id", strconv.Atoi)
 	if err != nil {
-		h.NotFoundResponse(w)
+		err = errs.NotFound(err, errs.WithMsg("not found"))
+		grape.RespondFromErr(ctx, w, err)
 		return
 	}
 
-	h.OkResponse(w, grape.Map{"id": id})
+	grape.Respond(ctx, w, http.StatusOK, grape.Map{"id": id})
 }
 
 ```
 
-It is possible customize Grape for different use-cases. You can view more inside the [examples](/_examples) directory.
+It is possible customize Grape for different use-cases. You can view more inside
+the [examples](/_examples) directory.
 
 ## Composability
 
-Grape consists of several components independent of each other. Giving developers **opt-in choice of features**.
-
-### `grape.Server`
-
-Providing methods for logging, interacting with json, common HTTP responses and some other useful utilities. 
-It can be embedded inside a struct, placed as a regular field, instantiate as a global variable,
-or even being passed around through the context.  
-An instance of it is created by running `grape.New()` and its behaviour is customizable by passing `grape.Options` 
-as an argument.
+Grape consists of several components independent of each other. Giving developers
+**opt-in choice of features**.
 
 ### `*grape.Router`
 
-Enable routing via methods named after HTTP verbs, with route grouping and scope-specific middlewares.
-Create a new instance by running `grape.NewRouter()`.  
-All routes are registered on server's startup and the rest is handled by the standard library,
-causing zero runtime overhead.
+Enable routing via methods named after HTTP verbs, with route grouping and
+scope-specific middlewares. Create a new instance by running `grape.NewRouter()`.  
+All routes are registered on server's startup and the rest is handled by the
+standard library, causing zero runtime overhead.
+
+### `slogger` package
+
+TODO
+
+### `errs` package
+
+TODO
 
 ### `validator` package
 
-Presenting wide range of functions for data validation. Start a new instance with `validator.New()`,
-then `Check` each part of your data with as many `Case`s it's necessary.
+Presenting wide range of functions for data validation. Start a new instance with
+`validator.New()`, then `Check` each part of your data with as many `Case`s 
+it's necessary.
 
 ## Why?
 
 Go standard library is awesome. It's fast, easy to use, and has a great API.  
-With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, in most cases there are not many reasons
-to look any further.
-Instead of breaking compatibility with net/http, Grape aims to add commonly used functions within the arm's reach of the
-handlers.
+With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, in
+most cases there are not many reasons to look any further.  
+Instead of breaking compatibility with net/http, Grape aims to add commonly used
+functions within the arm's reach.

@@ -2,26 +2,20 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/hossein1376/grape"
+	"github.com/hossein1376/grape/slogger"
 )
 
-type application struct {
-	grape.Server
-}
-
 func main() {
-	// principal is the same, naming is different.
-	app := application{Server: grape.New()}
+	_ = slogger.NewDefault(slogger.WithLevel(slog.LevelDebug))
 	router := grape.NewRouter()
-
-	router.Get("/", app.rootHandler)
-	group := router.Group("/group")
-	group.Get("/", app.groupHandler)
+	router.Get("/", rootHandler)
 
 	// create an instance of *http.Server; and pass it down to the Serve method.
 	srv := &http.Server{}
@@ -30,10 +24,11 @@ func main() {
 	// failure channel is used to communicate server's startup error.
 	quit, failure := make(chan os.Signal, 1), make(chan error, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	slog.Debug("starting server")
 
 	go func() {
-		app.Info("starting server on port 8000...")
-		err := router.Serve(":8000", srv) // passing srv as an optional argument
+		slog.Info("starting server on port 8000...")
+		err := router.Serve(":8000", srv) // passing srv instead of nil
 		if err != nil {
 			failure <- err
 			return
@@ -44,20 +39,16 @@ func main() {
 	case <-quit:
 		// after receiving the signal, gracefully stop the server.
 		if err := srv.Shutdown(context.Background()); err != nil {
-			app.Error("graceful shutdown failed", "err", err)
+			slog.Error("graceful shutdown failed", slogger.Err("error", err))
 			return
 		}
-		app.Info("server was gracefully shutdown")
+		slog.Info("server was gracefully shutdown")
 
 	case err := <-failure:
-		app.Error("failed to start server", "error", err)
+		slog.Error("failed to start server", "error", err)
 	}
 }
 
-func (app *application) rootHandler(w http.ResponseWriter, _ *http.Request) {
-	app.OkResponse(w, "root endpoint")
-}
-
-func (app *application) groupHandler(w http.ResponseWriter, _ *http.Request) {
-	app.OkResponse(w, "group endpoint")
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	grape.Respond(r.Context(), w, http.StatusOK, "root endpoint")
 }

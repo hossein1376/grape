@@ -1,64 +1,77 @@
 package main
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/hossein1376/grape"
+	"github.com/hossein1376/grape/errs"
+	"github.com/hossein1376/grape/slogger"
 	"github.com/hossein1376/grape/validator"
 )
 
-type handler struct {
-	grape.Server
-}
-
 func main() {
-	h := handler{Server: grape.New()}
 	r := grape.NewRouter()
 
-	r.Use(h.LoggerMiddleware, h.RecoverMiddleware)
-	r.Post("/users", h.createUserHandler)
+	r.Use(grape.LoggerMiddleware, grape.RecoverMiddleware)
+	r.Post("/users", createUserHandler)
 
-	h.Info("starting server on port 3000...")
-	err := r.Serve(":3000")
+	slog.Info("starting server on port 3000...")
+	err := r.Serve(":3000", nil)
 	if err != nil {
-		h.Error("failed to start server", "error", err)
+		slog.Error("failed to start server", slogger.Err("error", err))
 		return
 	}
 }
 
-func (h *handler) createUserHandler(w http.ResponseWriter, r *http.Request) {
+func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 		Age      int    `json:"age"`
 	}
+	ctx := r.Context()
 
 	var req request
-	err := h.ReadJson(w, r, &req)
+	err := grape.ReadJson(w, r, &req)
 	if err != nil {
-		h.BadRequestResponse(w, err)
+		err = errs.BadRequest(err)
+		grape.RespondFromErr(ctx, w, err)
 		return
 	}
 
 	v := validator.New()
 	v.Check("username",
-		validator.Case{Cond: validator.NotEmpty(req.Username), Msg: "must not be empty"},
-		validator.Case{Cond: validator.MaxLength(req.Username, 10), Msg: "must not be over 10 characters"},
+		validator.Case{
+			Cond: validator.NotEmpty(req.Username),
+			Msg:  "must not be empty",
+		},
+		validator.Case{
+			Cond: validator.MaxLength(req.Username, 10),
+			Msg:  "must not be over 10 characters",
+		},
 	)
 	v.Check("password",
-		validator.Case{Cond: validator.NotEmpty(req.Password), Msg: "must not be empty"},
-		validator.Case{Cond: validator.MinLength(req.Password, 6), Msg: "must be at least 6 characters"},
+		validator.Case{
+			Cond: validator.NotEmpty(req.Password),
+			Msg:  "must not be empty",
+		},
+		validator.Case{
+			Cond: validator.MinLength(req.Password, 6),
+			Msg:  "must be at least 6 characters",
+		},
 	)
 	v.Check("age",
-		validator.Case{Cond: validator.Range(req.Age, 0, 99), Msg: "must be between 0 and 99"},
+		validator.Case{
+			Cond: validator.Range(req.Age, 0, 99),
+			Msg:  "must be between 0 and 99",
+		},
 	)
 	if ok := v.Valid(); !ok {
-		h.Response(w, http.StatusBadRequest, v.Errors)
-		// since v.Errors implements error interface, you can do this as well: (with slightly different output format)
-		// h.BadRequestResponse(w, v.Errors)
+		grape.Respond(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
-	h.Info("create user handler", "request", req)
-	h.CreatedResponse(w, req)
+	slogger.Info(ctx, "create user handler", slog.Any("request", req))
+	grape.Respond(ctx, w, http.StatusNoContent, nil)
 }
