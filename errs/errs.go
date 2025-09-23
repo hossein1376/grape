@@ -1,4 +1,5 @@
 // Package errs exposes Error object which implements the error interface.
+// Helper functions describing different error scenarios are provided.
 package errs
 
 import (
@@ -12,7 +13,7 @@ type Error struct {
 	Message        string
 }
 
-func NewErr(err error, httpStatusCode int, opts []Options) Error {
+func NewError(err error, httpStatusCode int, opts []Options) Error {
 	e := Error{
 		Err:            err,
 		HTTPStatusCode: httpStatusCode,
@@ -41,7 +42,7 @@ func (e Error) Unwrap() error {
 //
 // HTTP: 400
 func BadRequest(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusBadRequest, opts)
+	return NewError(err, http.StatusBadRequest, opts)
 
 }
 
@@ -50,7 +51,7 @@ func BadRequest(err error, opts ...Options) Error {
 //
 // HTTP: 401
 func Unauthorized(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusUnauthorized, opts)
+	return NewError(err, http.StatusUnauthorized, opts)
 }
 
 // Forbidden indicates the caller does not have permission to execute
@@ -58,14 +59,14 @@ func Unauthorized(err error, opts ...Options) Error {
 //
 // HTTP: 403
 func Forbidden(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusForbidden, opts)
+	return NewError(err, http.StatusForbidden, opts)
 }
 
 // NotFound means some requested entity was not found.
 //
 // HTTP: 404
 func NotFound(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusNotFound, opts)
+	return NewError(err, http.StatusNotFound, opts)
 }
 
 // Conflict indicates operation was rejected because the request is in conflict
@@ -73,7 +74,7 @@ func NotFound(err error, opts ...Options) Error {
 //
 // HTTP: 409
 func Conflict(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusConflict, opts)
+	return NewError(err, http.StatusConflict, opts)
 }
 
 // TooMany indicates some resource has been exhausted, and client may need to
@@ -81,14 +82,14 @@ func Conflict(err error, opts ...Options) Error {
 //
 // HTTP: 429
 func TooMany(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusTooManyRequests, opts)
+	return NewError(err, http.StatusTooManyRequests, opts)
 }
 
 // Internal means something has gone wrong in the server's side.
 //
 // HTTP: 500
 func Internal(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusInternalServerError, opts)
+	return NewError(err, http.StatusInternalServerError, opts)
 }
 
 // Timeout means a timeout has been reached. The operation may have been
@@ -96,5 +97,5 @@ func Internal(err error, opts ...Options) Error {
 //
 // HTTP: 504
 func Timeout(err error, opts ...Options) Error {
-	return NewErr(err, http.StatusGatewayTimeout, opts)
+	return NewError(err, http.StatusGatewayTimeout, opts)
 }

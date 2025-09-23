@@ -1,4 +1,4 @@
-package router
+package grape
 
 import (
 	"net/http"
@@ -6,24 +6,25 @@ import (
 	"time"
 )
 
-// Router provides methods such as Get, Post and Use (among others) for routing.
+// Router provides methods such as [Router.Get], [Router.Post], and [Router.Use]
+// (among others) for routing.
 type Router struct {
 	scope       string
 	routes      map[string]http.Handler
 	middlewares []func(http.Handler) http.Handler
 	root        *root
-	srv         *http.Server
 }
 
 type root struct {
 	global []func(http.Handler) http.Handler
 	routes map[string]*Router
+	mux    *http.ServeMux
 }
 
-// New will initialize and returns a new router. This function is expected to be
-// called only once. Subsequent sub-path [Router] instances must be created by
-// the Group method.
-func New() *Router {
+// NewRouter will initialize and returns a new router. This function is expected
+// to be called only once. Subsequent sub-path [Router] instances must be created
+// via the [Router.Group] method.
+func NewRouter() *Router {
 	rt := &Router{
 		routes: make(map[string]http.Handler),
 		root: &root{
@@ -33,6 +34,10 @@ func New() *Router {
 	}
 	rt.root.routes[""] = rt
 	return rt
+}
+
+func (r *Router) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	r.root.mux.ServeHTTP(writer, request)
 }
 
 // Group creates a new Router instance from the current one, inheriting scope
@@ -118,20 +123,8 @@ func (r *Router) Serve(addr string, server *http.Server) error {
 	return srv.ListenAndServe()
 }
 
-// ServeTLS will start a TLS server on the provided address. It makes no
-// difference on which instance of Router this method is called from.
-// A nil value for server is valid. The two fields [Addr] and [Handler]
-// of [http.Server] are populated by the function itself. Certificate
-// and private key files must be passed as second and third arguments.
-func (r *Router) ServeTLS(
-	addr string, certFile string, keyFile string, server *http.Server,
-) error {
-	srv := r.newServer(addr, server)
-	return srv.ListenAndServeTLS(certFile, keyFile)
-}
-
 func (r *Router) newServer(addr string, server *http.Server) *http.Server {
-	handler := &http.ServeMux{}
+	handler := r.root.mux
 	for _, rt := range r.root.routes {
 		for path, handle := range rt.routes {
 			handler.Handle(path, handle)

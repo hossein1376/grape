@@ -47,9 +47,9 @@ func ParseInt64(s string) (int64, error) {
 	return strconv.ParseInt(s, 10, 64)
 }
 
-// Go spawns a new goroutine and will recover in case of panic; logging
-// the error message in Error level. Using this function ensures that
-// panic in goroutines will not stop the application's execution.
+// Go spawns a new goroutine and will recover in case of panic; logging the
+// error message in Error level. Using this function ensures panicking in other
+// goroutines will not stop the main goroutine.
 func Go(f func()) {
 	go func() {
 		defer func() {

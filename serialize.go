@@ -93,10 +93,6 @@ func WithMaxBodySize(size int64) func(*readOptions) {
 	}
 }
 
-func defaultReadOptions() *readOptions {
-	return &readOptions{maxBodySize: defaultMaxBodySize}
-}
-
 // ReadJson will decode incoming json requests. It will return a
 // human-readable error in case of failure.
 func ReadJson(
@@ -106,7 +102,7 @@ func ReadJson(
 		return errors.New("content type is not application/json")
 	}
 
-	opt := defaultReadOptions()
+	opt := &readOptions{maxBodySize: defaultMaxBodySize}
 	for _, o := range opts {
 		o(opt)
 	}
@@ -145,7 +141,9 @@ func ReadJson(
 			unmarshalTypeError.Offset,
 		)
 	case err.Error() == "http: request body too large":
-		return fmt.Errorf("body must not be larger than %d bytes", opt.maxBodySize)
+		return fmt.Errorf(
+			"body must not be larger than %d bytes", opt.maxBodySize,
+		)
 	case strings.HasPrefix(err.Error(), "json: unknown field "):
 		fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
 		return fmt.Errorf("body contains unknown key %s", fieldName)

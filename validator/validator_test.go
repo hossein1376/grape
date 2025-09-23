@@ -668,7 +668,7 @@ func BenchmarkValidationError(b *testing.B) {
 		"field_5": []string{"validation error"},
 	}
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		v.Error()
+	for b.Loop() {
+		_ = v.Error()
 	}
 }

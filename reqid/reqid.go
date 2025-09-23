@@ -11,6 +11,9 @@ type ReqID string
 
 const RequestIDKey ReqID = "request_id"
 
+// NewRequestID creates and return a 24 bits random string, encoded as base32.
+// The first 8 bits are filled based on the current UNIX time, while the other
+// 16 bits are randomly generated.
 func NewRequestID() ReqID {
 	return ReqID(text())
 }

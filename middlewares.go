@@ -10,6 +10,16 @@ import (
 	"github.com/hossein1376/grape/slogger"
 )
 
+type respWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (w *respWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -31,32 +41,22 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 			}
 			slogger.Info(
 				r.Context(),
-				"http server",
+				"request served",
 				slog.Group(
-					"request",
+					"req",
 					slog.String("client_ip", ip),
 					slog.String("method", r.Method),
 					slog.String("request_path", path),
 				),
 				slog.Group(
-					"response",
+					"resp",
 					slog.Int("status", rw.statusCode),
-					slog.String("duration", time.Since(start).String()),
+					slog.String("elapsed", time.Since(start).String()),
 				),
 			)
 		}()
 		next.ServeHTTP(rw, r)
 	})
-}
-
-type respWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (w *respWriter) WriteHeader(statusCode int) {
-	w.statusCode = statusCode
-	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 // RecoverMiddleware will recover from panics. It will display a log in error
@@ -65,7 +65,7 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if msg := recover(); msg != nil {
-				slogger.Error(nil, "Panic recovered", slog.Any("message", msg))
+				slog.Error("Panic recovered", slog.Any("message", msg))
 				Respond(nil, w, http.StatusInternalServerError, nil)
 			}
 		}()
@@ -87,10 +87,14 @@ func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
 		w.Header().Add("Access-Control-Allow-Credentials", "true")
-		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Add(
+			"Access-Control-Allow-Methods",
+			"POST, GET, OPTIONS, PUT, DELETE",
+		)
 		w.Header().Add(
 			"Access-Control-Allow-Headers",
-			"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+			"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
+		)
 
 		if r.Method == "OPTIONS" {
 			http.Error(w, "No Content", http.StatusNoContent)

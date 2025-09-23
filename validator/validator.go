@@ -9,14 +9,16 @@ import (
 	"unicode/utf8"
 )
 
-// Case is a test-case, consisting of two parts. Cond will call a function that returns a boolean.
-// if it returns false, Msg will be added to the Validator.Errors.
+// Case is a test-case, consisting of two parts. Cond will call a function that
+// returns a boolean. If it returns false, Msg will be added to the
+// [Validator.Errors].
 type Case struct {
 	Cond bool
 	Msg  string
 }
 
-// ValidationError holds all validation error messages. It implements error interface.
+// ValidationError holds all validation error messages. It implements error
+// interface.
 type ValidationError map[string][]string
 
 // Error returns validation errors in the following format:
@@ -32,8 +34,9 @@ func (v ValidationError) Error() string {
 	return strings.Join(s, ", ")
 }
 
-// Validator will check for cases by Check method and will return a boolean with Valid method.
-// If a validation error happens, the Msg will be stored inside the Errors map.
+// Validator will check for cases by Check method and will return a boolean with
+// Valid method. If a validation error happens, the Msg will be stored inside
+// the Errors map.
 type Validator struct {
 	Errors ValidationError `json:"errors"`
 }
@@ -48,7 +51,8 @@ func (v *Validator) Valid() bool {
 	return len(v.Errors) == 0
 }
 
-// Check accepts name of the field as the first argument, following by an arbitrary number of validation Case.
+// Check accepts name of the field as the first argument, following by an
+// arbitrary number of validation Case.
 func (v *Validator) Check(key string, cases ...Case) {
 	for _, c := range cases {
 		if !c.Cond {
@@ -95,7 +99,8 @@ func Max[T cmp.Ordered](value T, max T) bool {
 	return cmp.Compare(value, max) == -1 || cmp.Compare(value, max) == 0
 }
 
-// MaxLength checks if a string's utf8 length is equal or lesser the given maximum.
+// MaxLength checks if a string's utf8 length is equal or lesser the given
+// maximum.
 func MaxLength(value string, max int) bool {
 	return utf8.RuneCountInString(value) <= max
 }
@@ -106,7 +111,8 @@ func Min[T cmp.Ordered](value T, min T) bool {
 	return cmp.Compare(value, min) == 1 || cmp.Compare(value, min) == 0
 }
 
-// MinLength checks if a string's utf8 length is equal or greater the given minimum.
+// MinLength checks if a string's utf8 length is equal or greater the given
+// minimum.
 func MinLength(value string, min int) bool {
 	return min <= utf8.RuneCountInString(value)
 }
@@ -119,12 +125,15 @@ func NotEmpty(value string) bool {
 // Range checks if a value is inside a number range, inclusive.
 // For length, use RangeLength instead.
 func Range[T cmp.Ordered](value T, min, max T) bool {
-	return (cmp.Compare(value, min) == 1 || cmp.Compare(value, min) == 0) && (cmp.Compare(value, max) == -1 || cmp.Compare(value, max) == 0)
+	return (cmp.Compare(value, min) == 1 || cmp.Compare(value, min) == 0) &&
+		(cmp.Compare(value, max) == -1 || cmp.Compare(value, max) == 0)
 }
 
-// RangeLength checks if a string's utf8 length is inside the given range, inclusive.
+// RangeLength checks if a string's utf8 length is inside the given range,
+// inclusive.
 func RangeLength(value string, min, max int) bool {
-	return min <= utf8.RuneCountInString(value) && utf8.RuneCountInString(value) <= max
+	return min <= utf8.RuneCountInString(value) &&
+		utf8.RuneCountInString(value) <= max
 }
 
 // StartsWith check whether a string starts with a particular prefix.
