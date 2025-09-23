@@ -30,6 +30,9 @@ func (h ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 // they will be included in any Log Records created with such context. It relies
 // on the caller to not pass a nil context.
 func WithAttrs(parent context.Context, attr ...slog.Attr) context.Context {
+	if parent == nil {
+		parent = context.Background()
+	}
 	if len(attr) == 0 {
 		return parent
 	}

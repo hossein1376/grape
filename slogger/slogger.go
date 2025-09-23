@@ -2,20 +2,38 @@ package slogger
 
 import (
 	"context"
-	"io"
 	"log/slog"
+	"os"
 )
 
-// NewJSONLogger creates a new slog.Logger instance which logs to the stdout.
-// Level must be one of: "trace", "debug", "info", "warn", "error", or "fatal".
-// It will default to Info level if the given level is invalid.
-func NewJSONLogger(level slog.Level, w io.Writer) *slog.Logger {
-	h := &ContextHandler{slog.NewJSONHandler(
-		w, &slog.HandlerOptions{
-			Level: level,
-		}),
+func New(opts ...Option) *slog.Logger {
+	opt := &loggerOptions{
+		level: slog.LevelInfo,
+		dst:   os.Stdout,
 	}
-	return slog.New(h)
+	for _, o := range opts {
+		o(opt)
+	}
+
+	handlerOpts := &slog.HandlerOptions{
+		Level:       opt.level,
+		AddSource:   opt.addSrc,
+		ReplaceAttr: opt.replaceAtr,
+	}
+	var handler slog.Handler
+	if !opt.textLogger {
+		handler = slog.NewJSONHandler(opt.dst, handlerOpts)
+	} else {
+		handler = slog.NewTextHandler(opt.dst, handlerOpts)
+	}
+
+	return slog.New(&ContextHandler{handler})
+}
+
+func NewDefault(opts ...Option) *slog.Logger {
+	l := New(opts...)
+	slog.SetDefault(l)
+	return l
 }
 
 func Err(msg string, err error) slog.Attr {
