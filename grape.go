@@ -3,6 +3,7 @@
 package grape
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,13 @@ type Map = map[string]any
 
 const defaultMaxBodySize = 1_048_576 // 1mb
 
+var ErrMissingParam = errors.New("parameter not found")
+
+// Param attempts to extract the given parameter from path, or URL query params.
+// Then, the parser function is used to parse it to the expected type.
+// Example of the parser functions for primitive types are: [strconv.Atoi],
+// [strconv.ParseBool], [strconv.ParseFloat], and [ParseInt64]. It can also be
+// manually implemented for custom types.
 func Param[T any](
 	r *http.Request,
 	name string,
@@ -20,17 +28,21 @@ func Param[T any](
 ) (T, error) {
 	var t T
 	param := r.PathValue(name)
+	if param == "" {
+		if param = r.URL.Query().Get(name); param == "" {
+			return t, ErrMissingParam
+		}
+	}
 	i, err := parser(param)
 	if err != nil {
 		return t, fmt.Errorf("parse: %w", err)
-	}
-	if fmt.Sprintf("%v", i) != param {
-		return t, fmt.Errorf("parser: expected %s, got %v", param, i)
 	}
 
 	return i, nil
 }
 
+// ParseInt64 will attempt to parse the given input into an int64 number with
+// the base of 10. It is meant to be used as an argument to the [Param] func.
 func ParseInt64(s string) (int64, error) {
 	return strconv.ParseInt(s, 10, 64)
 }
