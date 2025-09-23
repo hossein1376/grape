@@ -16,25 +16,65 @@ type Response struct {
 	Data    any `json:"data,omitempty"`
 }
 
+type ResponseFormat int
+
+const (
+	JSON ResponseFormat = iota
+)
+
+type responseOptions struct {
+	format ResponseFormat
+}
+
+type ResponseOption func(*responseOptions)
+
+func WithResponseFormat(format ResponseFormat) ResponseOption {
+	return func(o *responseOptions) {
+		o.format = format
+	}
+}
+
 // Respond is a general function which responses with the provided message
 // and status code. It acts as an abstraction over WriteJson.
 func Respond(
-	ctx context.Context, w http.ResponseWriter, statusCode int, data any,
+	ctx context.Context,
+	w http.ResponseWriter,
+	statusCode int,
+	data any,
+	opts ...ResponseOption,
 ) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	opts := []WriteOpts{WithStatus(statusCode)}
-	if data != nil {
-		opts = append(opts, WithData(data))
+
+	opt := responseOptions{}
+	for _, o := range opts {
+		o(&opt)
 	}
-	WriteJson(ctx, w, opts...)
+
+	wOpts := []WriteOpts{WithStatus(statusCode)}
+	if data != nil {
+		wOpts = append(wOpts, WithData(data))
+	}
+
+	switch opt.format {
+	case JSON:
+		WriteJson(ctx, w, wOpts...)
+	}
 }
 
-// RespondFromErr attempts to extract
-func RespondFromErr(ctx context.Context, w http.ResponseWriter, err error) {
+// RespondFromErr extracts a response from the given error. If nil, 204 response
+// is returned. If error is of type [errs.Error], the status code and response
+// message are filled accordingly. Otherwise, a 500 response with the request ID
+// are returned.
+func RespondFromErr(
+	ctx context.Context,
+	w http.ResponseWriter,
+	err error,
+	opts ...ResponseOption,
+) {
 	if err == nil {
-		Respond(ctx, w, http.StatusNoContent, nil)
+		Respond(ctx, w, http.StatusNoContent, nil, opts...)
 		return
 	}
 
@@ -44,7 +84,7 @@ func RespondFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 		if msg == "" {
 			msg = http.StatusText(e.HTTPStatusCode)
 		}
-		Respond(ctx, w, e.HTTPStatusCode, Response{Message: msg})
+		Respond(ctx, w, e.HTTPStatusCode, Response{Message: msg}, opts...)
 		slogger.Debug(
 			ctx,
 			"failed request",
@@ -65,5 +105,6 @@ func RespondFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 			Message: http.StatusText(http.StatusInternalServerError),
 			Data:    reqID,
 		},
+		opts...,
 	)
 }
