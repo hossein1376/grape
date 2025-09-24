@@ -44,6 +44,10 @@ func (r *Router) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 // and middlewares.
 func (r *Router) Group(prefix string) *Router {
 	newScope := r.scope + prefix
+	existing, ok := r.root.routes[newScope]
+	if ok {
+		return existing
+	}
 	newRouter := &Router{
 		scope:       newScope,
 		routes:      make(map[string]http.Handler),
