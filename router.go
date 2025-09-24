@@ -16,9 +16,9 @@ type Router struct {
 }
 
 type root struct {
-	global []func(http.Handler) http.Handler
-	routes map[string]*Router
-	mux    *http.ServeMux
+	global  []func(http.Handler) http.Handler
+	routes  map[string]*Router
+	handler http.Handler
 }
 
 // NewRouter will initialize and returns a new router. This function is expected
@@ -37,7 +37,10 @@ func NewRouter() *Router {
 }
 
 func (r *Router) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	r.root.mux.ServeHTTP(writer, request)
+	if r.root.handler == nil {
+		r.root.handler = r.newHandler()
+	}
+	r.root.handler.ServeHTTP(writer, request)
 }
 
 // Group creates a new Router instance from the current one, inheriting scope
@@ -123,23 +126,10 @@ func (r *Router) UseAll(middlewares ...func(http.Handler) http.Handler) {
 // A nil value for server is valid. The two fields [Addr] and [Handler] of
 // [http.Server] are populated by the function itself.
 func (r *Router) Serve(addr string, server *http.Server) error {
-	srv := r.newServer(addr, server)
-	return srv.ListenAndServe()
-}
-
-func (r *Router) newServer(addr string, server *http.Server) *http.Server {
-	handler := r.root.mux
-	for _, rt := range r.root.routes {
-		for path, handle := range rt.routes {
-			handler.Handle(path, handle)
-		}
+	h := r.root.handler
+	if h == nil {
+		h = r.newHandler()
 	}
-
-	var h http.Handler = handler
-	for _, middleware := range r.root.global {
-		h = middleware(h)
-	}
-
 	if server == nil {
 		server = &http.Server{
 			// A good value between Apache's and Nginx's defaults
@@ -148,9 +138,24 @@ func (r *Router) newServer(addr string, server *http.Server) *http.Server {
 			ReadHeaderTimeout: time.Second * 45,
 		}
 	}
-	server.Addr, server.Handler = addr, h
+	server.Addr = addr
+	server.Handler = h
+	return server.ListenAndServe()
+}
 
-	return server
+func (r *Router) newHandler() http.Handler {
+	mux := http.NewServeMux()
+	for _, rt := range r.root.routes {
+		for path, handle := range rt.routes {
+			mux.Handle(path, handle)
+		}
+	}
+
+	var h http.Handler = mux
+	for _, middleware := range r.root.global {
+		h = middleware(h)
+	}
+	return h
 }
 
 func (r *Router) withMiddlewares(handler http.Handler) http.Handler {
