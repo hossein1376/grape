@@ -9,13 +9,13 @@ your projects.
 ## Features
 
 - Zero-dependency, 100% compatible with the standard library
-- Structured logging with [log/slog](https://pkg.go.dev/log/slog)
+- Structured logging with [log/slog](https://pkg.go.dev/log/slog) using the`slogger` package
 - Using new, improved [net/http](https://pkg.go.dev/net/http) router
 - Group routes and scope-specific middlewares
 - Read and write json via the [encoding/json](https://pkg.go.dev/encoding/json)
-- Highly customizable; bring your own logger and serializer!
-- Helper functions for commonly used HTTP status code responses
-- Featuring a built-in `validator` package for data validation
+- Boosting modular and customizable architecture
+- Featuring built-in `validator` and `errs` packages for validation and graceful
+ error handling
 
 ## Installation
 
@@ -26,9 +26,6 @@ go get -u github.com/hossein1376/grape@latest
 ```
 
 ## Usage
-
-The following is a simple example. For more, check out the [examples](/_examples)
-directory.
 
 ```go
 package main
@@ -44,36 +41,36 @@ import (
 )
 
 func main() {
-	// Create new default logger for all calls to `slog` and `log` packages
-	logger := slogger.NewDefault(slogger.WithLevel(slog.LevelDebug))
-	// grape.Router for routing and starting the server
+	slogger.NewDefault(slogger.WithLevel(slog.LevelDebug))
 	r := grape.NewRouter()
-
-	r.Use(
+	r.UseAll(
 		grape.RequestIDMiddleware,
 		grape.RecoverMiddleware,
 		grape.LoggerMiddleware,
-		grape.CORSMiddleware,
 	)
-	r.Get("/{id}", paramHandler)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		grape.Respond(r.Context(), w, http.StatusOK, "Hello, World!")
+	})
+	group := r.Group("")
+	group.Get("/{id}", paramHandler)
 
+	// Alternatively, you can call r.Serve(":3000", nil)
 	srv := &http.Server{Addr: ":3000", Handler: r}
-	// Alternatively, calling r.Serve(":3000", nil) will do the same thing
 	if err := srv.ListenAndServe(); err != nil {
-		logger.Error("start server failure", slogger.Err("error", err))
+		slog.Error("start server failure", slogger.Err("error", err))
 		return
 	}
 }
 
 func paramHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	slogger.Info(ctx, "Param handler!")
+	slogger.Debug(ctx, "Param handler!")
 
-	// id is extracted and parsed into int
 	id, err := grape.Param(r, "id", strconv.Atoi)
 	if err != nil {
-		err = errs.NotFound(err, errs.WithMsg("not found"))
-		grape.RespondFromErr(ctx, w, err)
+		grape.RespondFromErr(
+			ctx, w, errs.BadRequest(err, errs.WithMsg("invalid id")),
+		)
 		return
 	}
 
@@ -82,8 +79,8 @@ func paramHandler(w http.ResponseWriter, r *http.Request) {
 
 ```
 
-It is possible customize Grape for different use-cases. You can view more inside
-the [examples](/_examples) directory.
+It is possible customize and extend Grape for different use-cases. You can view
+more code samples inside the [examples](/_examples) directory.
 
 ## Composability
 
@@ -92,29 +89,34 @@ Grape consists of several components independent of each other. Giving developer
 
 ### `*grape.Router`
 
-Enable routing via methods named after HTTP verbs, with route grouping and
-scope-specific middlewares. Create a new instance by running `grape.NewRouter()`.  
+Enable routing via HTTP named methods, with route grouping and scope-specific
+middlewares. Create a new instance by calling `grape.NewRouter()`.  
 All routes are registered on server's startup and the rest is handled by the
 standard library, causing zero runtime overhead.
 
 ### `slogger` package
 
-TODO
+Acting as an abstraction over `log/slog` package, it creates a new logger with 
+the provided functional options, and optionally set it as the default logger.  
+It exposes wrapper functions around `slog.LogAttrs` for efficient and safe
+logging.
 
 ### `errs` package
 
-TODO
+Used for effortlessly conveying error details, messages and relevant status code
+among different layers and functions. Paired with `grape.RespondFromErr`,
+responses are automatically derived and written.
 
 ### `validator` package
 
-Presenting wide range of functions for data validation. Start a new instance with
-`validator.New()`, then `Check` each part of your data with as many `Case`s 
+Presenting wide range of functions for data validation, start a new instance with
+`validator.New()` and then `Check` each part of your data with as many `Case`s 
 it's necessary.
 
 ## Why?
 
-Go standard library is awesome. It's fast, easy to use, and has a great API.  
+Go's standard library is awesome. It's fast, easy to use, and has a great API.  
 With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, in
 most cases there are not many reasons to look any further.  
-Instead of breaking compatibility with net/http, Grape aims to add commonly used
-functions within the arm's reach.
+Instead of breaking compatibility with the `net/http`, Grape aims to add commonly
+used functions within the arm's reach of developer.

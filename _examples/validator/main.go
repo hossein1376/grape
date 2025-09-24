@@ -16,8 +16,8 @@ func main() {
 	r.Use(grape.LoggerMiddleware, grape.RecoverMiddleware)
 	r.Post("/users", createUserHandler)
 
-	slog.Info("starting server on port 3000...")
-	err := r.Serve(":3000", nil)
+	slog.Info("starting server on port 5000...")
+	err := r.Serve(":5000", nil)
 	if err != nil {
 		slog.Error("failed to start server", slogger.Err("error", err))
 		return
