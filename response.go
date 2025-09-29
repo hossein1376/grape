@@ -54,7 +54,7 @@ func RespondFromErr(
 	if errors.As(err, &e) {
 		msg := e.Message
 		if msg == "" {
-			msg = http.StatusText(e.HTTPStatusCode)
+			msg = e.Err.Error()
 		}
 		Respond(ctx, w, e.HTTPStatusCode, Response{Message: msg})
 		slogger.Debug(

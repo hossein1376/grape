@@ -9,9 +9,6 @@ import (
 
 // Error represents an error which will be passed up through the application
 // layers.
-// HTTPStatusCode is the status code stated by the caller.
-// Message is returned to the clients, and should not leak any internal info. If
-// no message has been specified, a generic text based the status code is used.
 type Error struct {
 	Err            error
 	HTTPStatusCode int
@@ -23,7 +20,6 @@ func New(err error, httpStatusCode int, opts ...Options) Error {
 	e := Error{
 		Err:            err,
 		HTTPStatusCode: httpStatusCode,
-		Message:        http.StatusText(httpStatusCode),
 	}
 	for _, opt := range opts {
 		opt(&e)
