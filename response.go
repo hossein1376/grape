@@ -12,26 +12,8 @@ import (
 )
 
 type Response struct {
-	Message any `json:"message"`
+	Message any `json:"message,omitempty"`
 	Data    any `json:"data,omitempty"`
-}
-
-type ResponseFormat int
-
-const (
-	JSON ResponseFormat = iota
-)
-
-type responseOptions struct {
-	format ResponseFormat
-}
-
-type ResponseOption func(*responseOptions)
-
-func WithResponseFormat(format ResponseFormat) ResponseOption {
-	return func(o *responseOptions) {
-		o.format = format
-	}
 }
 
 // Respond is a general function which responses with the provided message
@@ -41,26 +23,17 @@ func Respond(
 	w http.ResponseWriter,
 	statusCode int,
 	data any,
-	opts ...ResponseOption,
 ) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	opt := responseOptions{}
-	for _, o := range opts {
-		o(&opt)
-	}
-
-	wOpts := []WriteOpts{WithStatus(statusCode)}
+	opts := []WriteOpts{WithStatus(statusCode)}
 	if data != nil {
-		wOpts = append(wOpts, WithData(data))
+		opts = append(opts, WithData(data))
 	}
 
-	switch opt.format {
-	case JSON:
-		WriteJson(ctx, w, wOpts...)
-	}
+	WriteJson(ctx, w, opts...)
 }
 
 // RespondFromErr extracts a response from the given error. If nil, 204 response
@@ -71,10 +44,9 @@ func RespondFromErr(
 	ctx context.Context,
 	w http.ResponseWriter,
 	err error,
-	opts ...ResponseOption,
 ) {
 	if err == nil {
-		Respond(ctx, w, http.StatusNoContent, nil, opts...)
+		Respond(ctx, w, http.StatusNoContent, nil)
 		return
 	}
 
@@ -84,7 +56,7 @@ func RespondFromErr(
 		if msg == "" {
 			msg = http.StatusText(e.HTTPStatusCode)
 		}
-		Respond(ctx, w, e.HTTPStatusCode, Response{Message: msg}, opts...)
+		Respond(ctx, w, e.HTTPStatusCode, Response{Message: msg})
 		slogger.Debug(
 			ctx,
 			"failed request",
@@ -105,6 +77,5 @@ func RespondFromErr(
 			Message: http.StatusText(http.StatusInternalServerError),
 			Data:    reqID,
 		},
-		opts...,
 	)
 }

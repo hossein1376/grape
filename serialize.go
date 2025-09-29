@@ -71,11 +71,13 @@ func WriteJson(ctx context.Context, w http.ResponseWriter, opts ...WriteOpts) {
 	js, err := json.Marshal(opt.data)
 	if err != nil {
 		slogger.Error(ctx, "marshal data", slogger.Err("error", err))
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(opt.status)
 	if _, err = w.Write(js); err != nil {
 		slogger.Error(ctx, "write response", slogger.Err("error", err))
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	return

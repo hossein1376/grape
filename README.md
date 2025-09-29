@@ -3,13 +3,13 @@
 Grape is a modern, zero-dependency HTTP library for Go.
 
 It's a thin wrapper around the standard library, providing helper functions to
-facilitate faster and easier development. Adding only a single dependency to
-your projects.
+facilitate faster and easier development. While adding only a single dependency 
+to your projects.
 
 ## Features
 
 - Zero-dependency, 100% compatible with the standard library
-- Structured logging with [log/slog](https://pkg.go.dev/log/slog) using the`slogger` package
+- Structured logging with [log/slog](https://pkg.go.dev/log/slog)
 - Using new, improved [net/http](https://pkg.go.dev/net/http) router
 - Group routes and scope-specific middlewares
 - Read and write json via the [encoding/json](https://pkg.go.dev/encoding/json)
@@ -119,4 +119,4 @@ Go's standard library is awesome. It's fast, easy to use, and has a great API.
 With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, in
 most cases there are not many reasons to look any further.  
 Instead of breaking compatibility with the `net/http`, Grape aims to add commonly
-used functions within the arm's reach of developer.
+used functions within the arm's reach of developers.
