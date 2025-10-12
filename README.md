@@ -3,7 +3,7 @@
 Grape is a modern, zero-dependency HTTP library for Go.
 
 It's a thin wrapper around the standard library, providing helper functions to
-facilitate faster and easier development. While adding only a single dependency 
+facilitate faster and easier development, while adding only a single dependency 
 to your projects.
 
 ## Features
@@ -12,10 +12,10 @@ to your projects.
 - Structured logging with [log/slog](https://pkg.go.dev/log/slog)
 - Using new, improved [net/http](https://pkg.go.dev/net/http) router
 - Group routes and scope-specific middlewares
-- Read and write json via the [encoding/json](https://pkg.go.dev/encoding/json)
+- Read and write JSON via the [encoding/json](https://pkg.go.dev/encoding/json)
 - Boosting modular and customizable architecture
-- Featuring built-in `validator` and `errs` packages for validation and graceful
- error handling
+- Featuring `validator` and `errs` packages for validation and graceful error
+  handling
 
 ## Installation
 
@@ -79,15 +79,14 @@ func paramHandler(w http.ResponseWriter, r *http.Request) {
 
 ```
 
-It is possible customize and extend Grape for different use-cases. You can view
-more code samples inside the [examples](/_examples) directory.
+More code samples can be found inside the [examples](/_examples) directory.
 
 ## Composability
 
 Grape consists of several components independent of each other. Giving developers
-**opt-in choice of features**.
+**opt-in** choice of features.
 
-### `*grape.Router`
+### `grape.Router`
 
 Enable routing via HTTP named methods, with route grouping and scope-specific
 middlewares. Create a new instance by calling `grape.NewRouter()`.  
@@ -96,27 +95,27 @@ standard library, causing zero runtime overhead.
 
 ### `slogger` package
 
-Acting as an abstraction over `log/slog` package, it creates a new logger with 
+Acting as an abstraction over `log/slog` package, it creates a new logger with
 the provided functional options, and optionally set it as the default logger.  
-It exposes wrapper functions around `slog.LogAttrs` for efficient and safe
-logging.
+It also exposes wrapper functions around `slog.LogAttrs` for efficient and less
+error-prone logging.
 
 ### `errs` package
 
 Used for effortlessly conveying error details, messages and relevant status code
-among different layers and functions. Paired with `grape.RespondFromErr`,
-responses are automatically derived and written.
+between different functions and application layers . Paired with `RespondFromErr`,
+JSON responses can be automatically derived and written.
 
 ### `validator` package
 
-Presenting wide range of functions for data validation, start a new instance with
-`validator.New()` and then `Check` each part of your data with as many `Case`s 
-it's necessary.
+Presenting wide range of functions for data validation. Start a new instance with
+`validator.New()` and then use `Check` on each part of your data with as many
+`Case` it's necessary.
 
 ## Why?
 
-Go's standard library is awesome. It's fast, easy to use, and has a great API.  
-With the addition of log/slog in go 1.21 and improved HTTP router in go 1.22, in
-most cases there are not many reasons to look any further.  
+Go standard library is awesome. It's fast, easy to use, and has a great API.  
+With the addition of `log/slog` in go 1.21 and improved HTTP router in go 1.22,
+there are not many reasons to look any further.  
 Instead of breaking compatibility with the `net/http`, Grape aims to add commonly
 used functions within the arm's reach of developers.
