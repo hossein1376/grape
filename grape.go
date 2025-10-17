@@ -19,9 +19,9 @@ var (
 	ErrOverflow     = errors.New("value overflow")
 )
 
-// Param attempts to extract the given parameter from path, or URL query params.
-// Then, the parser function is used to parse it to the expected type.
-// Example of the parser functions for primitive types are: [strconv.Atoi],
+// Param attempts to extract the given parameter from path. Then, the parser
+// function is used to parse it to the expected type.
+// Some of the parser functions for primitive types are: [strconv.Atoi],
 // [strconv.ParseBool], [ParseInt], [ParseUint], and [ParseFloat]. It can also
 // be manually implemented for custom types.
 //
@@ -36,9 +36,7 @@ func Param[T any](
 	var t T
 	param := r.PathValue(name)
 	if param == "" {
-		if param = r.URL.Query().Get(name); param == "" {
-			return t, ErrMissingParam
-		}
+		return t, ErrMissingParam
 	}
 	i, err := parser(param)
 	if err != nil {
@@ -58,7 +56,7 @@ func ParseInt[
 		if err != nil {
 			return 0, err
 		}
-		return checkOverflow[T](s, i)
+		return checkOverflow[T](s, T(i))
 	}
 }
 
@@ -72,7 +70,7 @@ func ParseUint[
 		if err != nil {
 			return 0, err
 		}
-		return checkOverflow[T](s, i)
+		return checkOverflow[T](s, T(i))
 	}
 }
 
@@ -84,12 +82,11 @@ func ParseFloat[T ~float64 | ~float32]() func(string) (T, error) {
 		if err != nil {
 			return 0, err
 		}
-		return checkOverflow[T](s, i)
+		return checkOverflow[T](s, T(i))
 	}
 }
 
-func checkOverflow[T any](s string, i any) (T, error) {
-	t := T(i)
+func checkOverflow[T any](s string, t T) (T, error) {
 	if fmt.Sprintf("%d", t) != s {
 		return t, ErrOverflow
 	}
