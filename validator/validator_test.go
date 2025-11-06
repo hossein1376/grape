@@ -34,6 +34,42 @@ func TestEmpty(t *testing.T) {
 	}
 }
 
+func TestLen(t *testing.T) {
+	tests := []struct {
+		name   string
+		value  []int
+		length int
+		want   bool
+	}{
+		{
+			name:   "Empty input",
+			value:  []int{},
+			length: 0,
+			want:   true,
+		},
+		{
+			name:   "Not empty input",
+			value:  []int{3, 6, 9},
+			length: 3,
+			want:   true,
+		},
+		{
+			name:   "Wrong length",
+			value:  []int{4, 8},
+			length: 4,
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Len(tt.value, tt.length); got != tt.want {
+				t.Errorf("EndsWith() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEndsWith(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -218,7 +254,7 @@ func TestMax(t *testing.T) {
 	}
 }
 
-func TestMaxLength(t *testing.T) {
+func TestLengthMax(t *testing.T) {
 	tests := []struct {
 		name  string
 		value string
@@ -247,8 +283,8 @@ func TestMaxLength(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MaxLength(tt.value, tt.max); got != tt.want {
-				t.Errorf("MaxLength() = %v, want %v", got, tt.want)
+			if got := LengthMax(tt.value, tt.max); got != tt.want {
+				t.Errorf("LengthMax() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -291,7 +327,7 @@ func TestMin(t *testing.T) {
 	}
 }
 
-func TestMinLength(t *testing.T) {
+func TestLengthMin(t *testing.T) {
 	tests := []struct {
 		name  string
 		value string
@@ -320,35 +356,8 @@ func TestMinLength(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MinLength(tt.value, tt.min); got != tt.want {
-				t.Errorf("MinLength() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNotEmpty(t *testing.T) {
-	tests := []struct {
-		name  string
-		value string
-		want  bool
-	}{
-		{
-			name:  "Empty input",
-			value: "",
-			want:  false,
-		},
-		{
-			name:  "Not empty input",
-			value: "text",
-			want:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NotEmpty(tt.value); got != tt.want {
-				t.Errorf("NotEmpty() = %v, want %v", got, tt.want)
+			if got := LengthMin(tt.value, tt.min); got != tt.want {
+				t.Errorf("LengthMin() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -402,7 +411,7 @@ func TestRange(t *testing.T) {
 	}
 }
 
-func TestRangeLength(t *testing.T) {
+func TestLengthRange(t *testing.T) {
 	tests := []struct {
 		name  string
 		value string
@@ -469,8 +478,8 @@ func TestRangeLength(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := RangeLength(tt.value, tt.min, tt.max); got != tt.want {
-				t.Errorf("RangeLength() = %v, want %v", got, tt.want)
+			if got := LengthRange(tt.value, tt.min, tt.max); got != tt.want {
+				t.Errorf("LengthRange() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -574,7 +583,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestValidator_Check_Valid(t *testing.T) {
+func TestValidator_Check_Validate(t *testing.T) {
 	tests := []struct {
 		name   string
 		Errors map[string][]string
@@ -618,8 +627,8 @@ func TestValidator_Check_Valid(t *testing.T) {
 			if len(v.Errors) != tt.errorNum {
 				t.Errorf("expected %d errors, got %d", tt.errorNum, len(v.Errors))
 			}
-			if v.Valid() != tt.valid {
-				t.Errorf("expected validation to be %v, got %v", tt.valid, v.Valid())
+			if v.Validate() != tt.valid {
+				t.Errorf("expected validation to be %v, got %v", tt.valid, v.Validate())
 			}
 		})
 	}

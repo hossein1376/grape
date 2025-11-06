@@ -17,8 +17,8 @@ type Case struct {
 	Msg  string
 }
 
-// ValidationError holds all validation error messages. It implements error
-// interface.
+// ValidationError holds all validation error messages. It also implements the
+// error interface.
 type ValidationError map[string][]string
 
 // Error returns validation errors in the following format:
@@ -34,9 +34,9 @@ func (v ValidationError) Error() string {
 	return strings.Join(s, ", ")
 }
 
-// Validator will check for cases by Check method and will return a boolean with
-// Valid method. If a validation error happens, the Msg will be stored inside
-// the Errors map.
+// Validator will check for cases by [Check] method and will return a boolean
+// with the [Validate] method. If a validation error happens, the Msg will be
+// stored inside the [Errors] map.
 type Validator struct {
 	Errors ValidationError `json:"errors"`
 }
@@ -44,11 +44,6 @@ type Validator struct {
 // New will return an instance of Validator.
 func New() *Validator {
 	return &Validator{Errors: make(map[string][]string)}
-}
-
-// Valid returns a boolean indicating whether validation was successful or not.
-func (v *Validator) Valid() bool {
-	return len(v.Errors) == 0
 }
 
 // Check accepts name of the field as the first argument, following by an
@@ -61,92 +56,125 @@ func (v *Validator) Check(key string, cases ...Case) {
 	}
 }
 
+// Validate returns a boolean indicating whether validation was successful or not.
+func (v Validator) Validate() bool {
+	return len(v.Errors) == 0
+}
+
 func (v *Validator) addError(key, message string) {
 	v.Errors[key] = append(v.Errors[key], message)
 }
 
-// Empty checks if a string is empty.
-func Empty(value string) bool {
-	return len(value) == 0
+// Empty checks if the given input is empty (of len zero).
+func Empty[T ~string](input T) bool {
+	return len(input) == 0
 }
 
-// EndsWith check whether a string ends with a particular suffix.
-func EndsWith(value, suffix string) bool {
-	return strings.HasSuffix(value, suffix)
+// Len checks if the given input is of given length. For strings, use [Length*]
+// functions.
+func Len[S any, T ~[]S](input T, l int) bool {
+	return len(input) == l
+}
+
+// LenRange checks if the given input is in the given range, inclusive. For
+// strings, use [Length*] functions.
+func LenRange[S any, T ~[]S](input T, low, high int) bool {
+	return low <= len(input) && len(input) <= high
+}
+
+// EndsWith check whether the input ends with one of the given suffixes.
+func EndsWith[T ~string](input T, suffixes ...T) bool {
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(string(input), string(suffix)) {
+			return true
+		}
+	}
+	return false
+}
+
+// StartsWith check whether the input starts with one of the given prefixes.
+func StartsWith[T ~string](input T, prefixes ...T) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(string(input), string(prefix)) {
+			return true
+		}
+	}
+	return false
+}
+
+// Contains check if the input contains any of the given values.
+func Contains[T ~string](input T, values ...T) bool {
+	for _, value := range values {
+		if strings.Contains(string(input), string(value)) {
+			return true
+		}
+	}
+	return false
 }
 
 // IsNumber checks if the given string is all numbers.
-func IsNumber(value string) bool {
-	if _, err := strconv.Atoi(value); err != nil {
-		return false
-	}
-	return true
+func IsNumber[T ~string](input T) bool {
+	_, err := strconv.Atoi(string(input))
+	return err == nil
 }
 
-// In checks if the value is present in a given list of arguments.
-func In[T comparable](value T, list ...T) bool {
-	return slices.Contains(list, value)
+// In checks if the input is present in the given list of arguments.
+func In[T comparable](input T, list ...T) bool {
+	if len(list) == 0 {
+		return false
+	}
+	return slices.Contains(list, input)
 }
 
 // Matches will match a string with a regular expression.
-func Matches(value string, rx *regexp.Regexp) bool {
-	return rx.MatchString(value)
+func Matches(input string, re *regexp.Regexp) bool {
+	return re.MatchString(input)
 }
 
-// Max checks if a value is equal or lesser than a maximum.
-// For length, use MaxLength instead.
-func Max[T cmp.Ordered](value T, max T) bool {
-	return cmp.Compare(value, max) == -1 || cmp.Compare(value, max) == 0
+// Max checks if the input is equal or lesser than a maximum.
+// For length, use LengthMax instead.
+func Max[T cmp.Ordered](input T, max T) bool {
+	return cmp.Compare(input, max) == -1 || cmp.Compare(input, max) == 0
 }
 
-// MaxLength checks if a string's utf8 length is equal or lesser the given
+// Min checks if the input is equal or bigger than a minimum.
+// For length, use LengthMin instead.
+func Min[T cmp.Ordered](input T, min T) bool {
+	return cmp.Compare(input, min) == 1 || cmp.Compare(input, min) == 0
+}
+
+// Range checks if the input is inside a number range, inclusive.
+// For length, use LengthRange instead.
+func Range[T cmp.Ordered](input T, min, max T) bool {
+	return (cmp.Compare(input, min) == 1 || cmp.Compare(input, min) == 0) &&
+		(cmp.Compare(input, max) == -1 || cmp.Compare(input, max) == 0)
+}
+
+// LengthMax checks if a string's utf8 length is equal or lesser the given
 // maximum.
-func MaxLength(value string, max int) bool {
-	return utf8.RuneCountInString(value) <= max
+func LengthMax[T ~string](input T, max int) bool {
+	return utf8.RuneCountInString(string(input)) <= max
 }
 
-// Min checks if a value is equal or bigger than a minimum.
-// For length, use MinLength instead.
-func Min[T cmp.Ordered](value T, min T) bool {
-	return cmp.Compare(value, min) == 1 || cmp.Compare(value, min) == 0
-}
-
-// MinLength checks if a string's utf8 length is equal or greater the given
+// LengthMin checks if a string's utf8 length is equal or greater the given
 // minimum.
-func MinLength(value string, min int) bool {
-	return min <= utf8.RuneCountInString(value)
+func LengthMin[T ~string](input T, min int) bool {
+	return min <= utf8.RuneCountInString(string(input))
 }
 
-// NotEmpty checks if the given value is not empty.
-func NotEmpty(value string) bool {
-	return len(value) != 0
-}
-
-// Range checks if a value is inside a number range, inclusive.
-// For length, use RangeLength instead.
-func Range[T cmp.Ordered](value T, min, max T) bool {
-	return (cmp.Compare(value, min) == 1 || cmp.Compare(value, min) == 0) &&
-		(cmp.Compare(value, max) == -1 || cmp.Compare(value, max) == 0)
-}
-
-// RangeLength checks if a string's utf8 length is inside the given range,
+// LengthRange checks if a string's utf8 length is inside the given range,
 // inclusive.
-func RangeLength(value string, min, max int) bool {
-	return min <= utf8.RuneCountInString(value) &&
-		utf8.RuneCountInString(value) <= max
-}
-
-// StartsWith check whether a string starts with a particular prefix.
-func StartsWith(value, prefix string) bool {
-	return strings.HasPrefix(value, prefix)
+func LengthRange[T ~string](input T, min, max int) bool {
+	return min <= utf8.RuneCountInString(string(input)) &&
+		utf8.RuneCountInString(string(input)) <= max
 }
 
 // Unique checks if all elements of a given slice are unique.
 func Unique[T cmp.Ordered](values []T) bool {
+	if len(values) == 0 || len(values) == 1 {
+		return true
+	}
 	s := slices.Clone(values)
 	slices.Sort(s)
-	if len(slices.Compact(s)) != len(values) {
-		return false
-	}
-	return true
+	return len(slices.Compact(s)) == len(values)
 }
