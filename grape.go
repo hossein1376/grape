@@ -15,7 +15,8 @@ type Map = map[string]any
 const defaultMaxBodySize = 1_048_576 // 1mb
 
 var (
-	ErrMissingParam = errors.New("parameter not found")
+	ErrMissingParam = errors.New("path parameter not found")
+	ErrMissingQuery = errors.New("query parameter not found")
 	ErrOverflow     = errors.New("value overflow")
 )
 
@@ -35,6 +36,24 @@ func Param[T any](
 ) (T, error) {
 	var t T
 	param := r.PathValue(name)
+	if param == "" {
+		return t, ErrMissingParam
+	}
+	i, err := parser(param)
+	if err != nil {
+		return t, fmt.Errorf("parse: %w", err)
+	}
+
+	return i, nil
+}
+
+// Query attempts to extract and parse the given query parameter. For more
+// details, refer to the [Param] func.
+func Query[T any](
+	r *http.Request, name string, parser func(s string) (T, error),
+) (T, error) {
+	var t T
+	param := r.URL.Query().Get(name)
 	if param == "" {
 		return t, ErrMissingParam
 	}
