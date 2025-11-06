@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -50,10 +51,10 @@ func Param[T any](
 // Query attempts to extract and parse the given query parameter. For more
 // details, refer to the [Param] func.
 func Query[T any](
-	r *http.Request, name string, parser func(s string) (T, error),
+	query url.Values, name string, parser func(s string) (T, error),
 ) (T, error) {
 	var t T
-	param := r.URL.Query().Get(name)
+	param := query.Get(name)
 	if param == "" {
 		return t, ErrMissingParam
 	}
