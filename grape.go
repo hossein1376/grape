@@ -56,7 +56,7 @@ func ParseInt[
 		if err != nil {
 			return 0, err
 		}
-		return checkOverflow[T](s, T(i))
+		return checkOverflow(s, T(i))
 	}
 }
 
@@ -70,7 +70,7 @@ func ParseUint[
 		if err != nil {
 			return 0, err
 		}
-		return checkOverflow[T](s, T(i))
+		return checkOverflow(s, T(i))
 	}
 }
 
@@ -82,12 +82,12 @@ func ParseFloat[T ~float64 | ~float32]() func(string) (T, error) {
 		if err != nil {
 			return 0, err
 		}
-		return checkOverflow[T](s, T(i))
+		return checkOverflow(s, T(i))
 	}
 }
 
 func checkOverflow[T any](s string, t T) (T, error) {
-	if fmt.Sprintf("%d", t) != s {
+	if fmt.Sprintf("%v", t) != s {
 		return t, ErrOverflow
 	}
 	return t, nil

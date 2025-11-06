@@ -80,7 +80,6 @@ func WriteJson(ctx context.Context, w http.ResponseWriter, opts ...WriteOpts) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	return
 }
 
 type readOptions struct {

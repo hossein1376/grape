@@ -28,7 +28,7 @@ const base32alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 func text() string {
 	src := make([]byte, 24)
 	binary.BigEndian.PutUint64(src[:8], uint64(time.Now().UnixNano()))
-	rand.Read(src[8:])
+	_, _ = rand.Read(src[8:])
 	for i := range src {
 		src[i] = base32alphabet[src[i]%32]
 	}
