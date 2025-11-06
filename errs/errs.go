@@ -16,9 +16,8 @@ type Error struct {
 }
 
 // New returns a new instance of the [Error] object.
-func New(err error, httpStatusCode int, opts ...Options) Error {
+func New(httpStatusCode int, opts ...Options) Error {
 	e := Error{
-		Err:            err,
 		HTTPStatusCode: httpStatusCode,
 	}
 	for _, opt := range opts {
@@ -27,12 +26,20 @@ func New(err error, httpStatusCode int, opts ...Options) Error {
 	return e
 }
 
-// Error returns error's text, prefixed by its HTTP status code.
+// Error returns error's text, prefixed by its HTTP status code. If the underlying
+// error is nil, then the default text of that status code is used.
 // Example:
 //
-//	[400] Bad Input
+//	[400] Bad Request
+//	[404] missing record
 func (e Error) Error() string {
-	return fmt.Sprintf("[%d] %s", e.HTTPStatusCode, e.Err)
+	var errMsg string
+	if e.Err == nil {
+		errMsg = http.StatusText(e.HTTPStatusCode)
+	} else {
+		errMsg = e.Err.Error()
+	}
+	return fmt.Sprintf("[%d] %s", e.HTTPStatusCode, errMsg)
 }
 
 // Unwrap returns the underlying Err.
@@ -44,8 +51,8 @@ func (e Error) Unwrap() error {
 // correct them before retrying.
 //
 // HTTP: 400
-func BadRequest(err error, opts ...Options) Error {
-	return New(err, http.StatusBadRequest, opts...)
+func BadRequest(opts ...Options) Error {
+	return New(http.StatusBadRequest, opts...)
 
 }
 
@@ -53,52 +60,59 @@ func BadRequest(err error, opts ...Options) Error {
 // credentials for the operation.
 //
 // HTTP: 401
-func Unauthorized(err error, opts ...Options) Error {
-	return New(err, http.StatusUnauthorized, opts...)
+func Unauthorized(opts ...Options) Error {
+	return New(http.StatusUnauthorized, opts...)
 }
 
 // Forbidden indicates the caller does not have permission to execute
 // the specified operation.
 //
 // HTTP: 403
-func Forbidden(err error, opts ...Options) Error {
-	return New(err, http.StatusForbidden, opts...)
+func Forbidden(opts ...Options) Error {
+	return New(http.StatusForbidden, opts...)
 }
 
 // NotFound means some requested entity was not found.
 //
 // HTTP: 404
-func NotFound(err error, opts ...Options) Error {
-	return New(err, http.StatusNotFound, opts...)
+func NotFound(opts ...Options) Error {
+	return New(http.StatusNotFound, opts...)
 }
 
 // Conflict indicates operation was rejected because the request is in conflict
 // with the system's current state.
 //
 // HTTP: 409
-func Conflict(err error, opts ...Options) Error {
-	return New(err, http.StatusConflict, opts...)
+func Conflict(opts ...Options) Error {
+	return New(http.StatusConflict, opts...)
 }
 
 // TooMany indicates some resource has been exhausted, and client may need to
 // wait some time before retrying.
 //
 // HTTP: 429
-func TooMany(err error, opts ...Options) Error {
-	return New(err, http.StatusTooManyRequests, opts...)
+func TooMany(opts ...Options) Error {
+	return New(http.StatusTooManyRequests, opts...)
 }
 
 // Internal means something has gone wrong in the server's side.
 //
 // HTTP: 500
-func Internal(err error, opts ...Options) Error {
-	return New(err, http.StatusInternalServerError, opts...)
+func Internal(opts ...Options) Error {
+	return New(http.StatusInternalServerError, opts...)
+}
+
+// BadGateway indicates a remote service is currently unreachable.
+//
+// HTTP: 502
+func BadGateway(opts ...Options) Error {
+	return New(http.StatusBadGateway, opts...)
 }
 
 // Timeout means a timeout has been reached. The operation may have been
 // completed successfully or not.
 //
 // HTTP: 504
-func Timeout(err error, opts ...Options) Error {
-	return New(err, http.StatusGatewayTimeout, opts...)
+func Timeout(opts ...Options) Error {
+	return New(http.StatusGatewayTimeout, opts...)
 }
