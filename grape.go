@@ -11,14 +11,17 @@ import (
 	"strconv"
 )
 
-type Map = map[string]any
-
 const defaultMaxBodySize = 1_048_576 // 1mb
 
 var (
 	ErrMissingParam = errors.New("path parameter not found")
 	ErrMissingQuery = errors.New("query parameter not found")
 	ErrOverflow     = errors.New("value overflow")
+)
+
+type (
+	Map           = map[string]any
+	Parser[T any] func(s string) (T, error)
 )
 
 // Param attempts to extract the given parameter from path. Then, the parser
@@ -32,9 +35,7 @@ var (
 //	grape.Param(r, "boolean", strconv.ParseBool)
 //	grape.Param(r, "integer", grape.ParseInt[int16]())
 //	grape.Param(r, "float", grape.ParseFloat[float64]())
-func Param[T any](
-	r *http.Request, name string, parser func(s string) (T, error),
-) (T, error) {
+func Param[T any](r *http.Request, name string, parser Parser[T]) (T, error) {
 	var t T
 	param := r.PathValue(name)
 	if param == "" {
@@ -50,9 +51,7 @@ func Param[T any](
 
 // Query attempts to extract and parse the given query parameter. For more
 // details, refer to the [Param] func.
-func Query[T any](
-	query url.Values, name string, parser func(s string) (T, error),
-) (T, error) {
+func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	var t T
 	param := query.Get(name)
 	if param == "" {

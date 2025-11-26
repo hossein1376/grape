@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -59,9 +60,7 @@ func WriteJson(ctx context.Context, w http.ResponseWriter, opts ...WriteOpts) {
 	for _, o := range opts {
 		o(opt)
 	}
-	for key, value := range opt.headers {
-		w.Header()[key] = value
-	}
+	maps.Copy(w.Header(), opt.headers)
 
 	if opt.data == nil {
 		w.WriteHeader(opt.status)
