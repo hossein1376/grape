@@ -35,7 +35,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req request
 	err := grape.ReadJson(w, r, &req)
 	if err != nil {
-		err = errs.BadRequest(err)
+		err = errs.BadRequest(errs.WithErr(err))
 		grape.RespondFromErr(ctx, w, err)
 		return
 	}
@@ -43,21 +43,21 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	v := validator.New()
 	v.Check("username",
 		validator.Case{
-			Cond: validator.NotEmpty(req.Username),
+			Cond: validator.Not(validator.Empty(req.Username)),
 			Msg:  "must not be empty",
 		},
 		validator.Case{
-			Cond: validator.MaxLength(req.Username, 10),
+			Cond: validator.LengthMax(req.Username, 10),
 			Msg:  "must not be over 10 characters",
 		},
 	)
 	v.Check("password",
 		validator.Case{
-			Cond: validator.NotEmpty(req.Password),
+			Cond: validator.Not(validator.Empty(req.Password)),
 			Msg:  "must not be empty",
 		},
 		validator.Case{
-			Cond: validator.MinLength(req.Password, 6),
+			Cond: validator.LengthMin(req.Password, 6),
 			Msg:  "must be at least 6 characters",
 		},
 	)
@@ -67,7 +67,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 			Msg:  "must be between 0 and 99",
 		},
 	)
-	if ok := v.Valid(); !ok {
+	if ok := v.Validate(); !ok {
 		grape.Respond(ctx, w, http.StatusBadRequest, err)
 		return
 	}

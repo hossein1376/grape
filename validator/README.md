@@ -29,7 +29,7 @@ func simpleValidation() {
 	emailRE := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 
 	v := validator.New()
-	v.Check("name", validator.Case{Cond: !validator.Empty(d.Name), Msg: "must not be empty"})
+	v.Check("name", validator.Case{Cond: validator.Not(validator.Empty(d.Name)), Msg: "must not be empty"})
 	v.Check("age", validator.Case{Cond: validator.Min(d.Age, 0), Msg: "must not be positive"})
 	v.Check("email", validator.Case{Cond: validator.Matches(d.Email, emailRE), Msg: "must be valid email"})
 
@@ -46,7 +46,7 @@ func multiValidation() {
 
 	v := validator.New()
 	v.Check("name",
-		validator.Case{Cond: !validator.Empty(d.Name), Msg: "must not be empty"},
+		validator.Case{Cond: validator.Not(validator.Empty(d.Name)), Msg: "must not be empty"},
 		validator.Case{Cond: validator.LengthMin(d.Name, 2), Msg: "must not be less than 2 characters"},
 	)
 	v.Check("phone",
@@ -61,5 +61,4 @@ func multiValidation() {
 	}
 	fmt.Println("Valid input!")
 }
-
 ```

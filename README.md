@@ -69,14 +69,15 @@ func paramHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := grape.Param(r, "id", strconv.Atoi)
 	if err != nil {
 		grape.RespondFromErr(
-			ctx, w, errs.BadRequest(err, errs.WithMsg("invalid id")),
+			ctx,
+			w,
+			errs.BadRequest(errs.WithErr(err), errs.WithMsg("invalid id")),
 		)
 		return
 	}
 
 	grape.Respond(ctx, w, http.StatusOK, grape.Map{"id": id})
 }
-
 ```
 
 More code samples can be found inside the [examples](/_examples) directory.

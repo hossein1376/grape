@@ -65,6 +65,11 @@ func (v *Validator) addError(key, message string) {
 	v.Errors[key] = append(v.Errors[key], message)
 }
 
+// Not returns the negation of the given predicate.
+func Not(predicate bool) bool {
+	return !predicate
+}
+
 // Empty checks if the given input is empty (of len zero).
 func Empty[T ~string](input T) bool {
 	return len(input) == 0

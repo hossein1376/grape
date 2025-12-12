@@ -18,7 +18,7 @@ func createPermitHandler(w http.ResponseWriter, r *http.Request) {
 	err := grape.ReadJson(w, r, &req)
 	if err != nil {
 		slogger.Info(ctx, "reda request", slogger.Err("error", err))
-		err = errs.BadRequest(err)
+		err = errs.BadRequest(errs.WithErr(err))
 		return
 	}
 
@@ -29,10 +29,10 @@ func getPermitByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	slogger.Debug(ctx, "getPermitByID handler")
 
-	pid, err := grape.Param(r, "pid", grape.ParseInt64)
+	pid, err := grape.Param(r, "pid", grape.ParseInt[int64]())
 	if err != nil {
 		slogger.Info(ctx, "invalid parameter", slogger.Err("error", err))
-		err = errs.BadRequest(err, errs.WithMsg("invalid id"))
+		err = errs.BadRequest(errs.WithMsg("invalid id"))
 		return
 	}
 

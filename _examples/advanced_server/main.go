@@ -17,7 +17,7 @@ func main() {
 		slogger.WithAddSource(),
 		slogger.WithTextLogger(),
 	)
-	// You can use slogger.NewDefault too
+	// You can use [slogger.NewDefault] too
 	slog.SetDefault(logger)
 
 	// Routes can be defined in a separate function
