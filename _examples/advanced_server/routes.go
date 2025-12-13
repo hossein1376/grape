@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/hossein1376/grape"
@@ -8,17 +9,23 @@ import (
 	"github.com/hossein1376/grape/slogger"
 )
 
-func createPermitHandler(w http.ResponseWriter, r *http.Request) {
-	type request struct {
-		Name string `json:"name"`
-	}
-	ctx := r.Context()
+type createPermitRequest struct {
+	Name string `json:"name"`
+}
 
-	var req request
-	err := grape.ReadJson(w, r, &req)
+func (r createPermitRequest) Validate() error {
+	if r.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	return nil
+}
+
+func createPermitHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	req, err := grape.ReadJSON[createPermitRequest](w, r)
 	if err != nil {
-		slogger.Info(ctx, "reda request", slogger.Err("error", err))
 		err = errs.BadRequest(errs.WithErr(err))
+		grape.RespondFromErr(ctx, w, err)
 		return
 	}
 

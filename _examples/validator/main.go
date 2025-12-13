@@ -32,8 +32,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 
-	var req request
-	err := grape.ReadJson(w, r, &req)
+	req, err := grape.ReadJSON[request](w, r)
 	if err != nil {
 		err = errs.BadRequest(errs.WithErr(err))
 		grape.RespondFromErr(ctx, w, err)
