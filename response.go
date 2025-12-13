@@ -33,7 +33,7 @@ func Respond(
 		opts = append(opts, WithData(data))
 	}
 
-	WriteJson(ctx, w, opts...)
+	WriteJSON(ctx, w, opts...)
 }
 
 // RespondFromErr extracts a response from the given error. If nil, 204 response

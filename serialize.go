@@ -46,16 +46,14 @@ func WithData(data any) func(*writeOption) {
 
 func WithHeaders(headers http.Header) func(*writeOption) {
 	return func(o *writeOption) {
-		for key, values := range headers {
-			o.headers[key] = values
-		}
+		maps.Copy(o.headers, headers)
 	}
 }
 
-// WriteJson will write back data in json format with the provided status code
+// WriteJSON will write back data in json format with the provided status code
 // and headers. It automatically sets content-type and date headers. To override,
 // provide them as headers.
-func WriteJson(ctx context.Context, w http.ResponseWriter, opts ...WriteOpts) {
+func WriteJSON(ctx context.Context, w http.ResponseWriter, opts ...WriteOpts) {
 	opt := defaultWriteOptions()
 	for _, o := range opts {
 		o(opt)
@@ -76,78 +74,83 @@ func WriteJson(ctx context.Context, w http.ResponseWriter, opts ...WriteOpts) {
 	w.WriteHeader(opt.status)
 	if _, err = w.Write(js); err != nil {
 		slogger.Error(ctx, "write response", slogger.Err("error", err))
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }
 
-type readOptions struct {
+type readOptions[T any] struct {
 	maxBodySize int64
 }
 
-type ReadOpts func(*readOptions)
+type ReadOpts[T any] func(*readOptions[T])
 
-func WithMaxBodySize(size int64) func(*readOptions) {
-	return func(o *readOptions) {
+func WithMaxBodySize(size int64) func(*readOptions[any]) {
+	return func(o *readOptions[any]) {
 		o.maxBodySize = size
 	}
 }
 
-// ReadJson will decode incoming json requests. It will return a
+// ReadJSON will decode incoming json requests. It will return a
 // human-readable error in case of failure.
-func ReadJson(
-	w http.ResponseWriter, r *http.Request, dst any, opts ...ReadOpts,
-) error {
-	if strings.ToLower(r.Header.Get("content-type")) != "application/json" {
-		return errors.New("content type is not application/json")
+func ReadJSON[T any](
+	w http.ResponseWriter, r *http.Request, opts ...ReadOpts[T],
+) (*T, error) {
+	ct := strings.ToLower(strings.TrimSpace(r.Header.Get("Content-Type")))
+	if !strings.HasPrefix(ct, "application/json") {
+		return nil, errors.New("content type is not application/json")
 	}
-
-	opt := &readOptions{maxBodySize: defaultMaxBodySize}
+	opt := &readOptions[T]{maxBodySize: defaultMaxBodySize}
 	for _, o := range opts {
 		o(opt)
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, opt.maxBodySize)
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
+
+	dst := new(T)
 	err := dec.Decode(dst)
 	if err == nil {
 		if err = dec.Decode(&struct{}{}); err != io.EOF {
-			return errors.New("body must only contain a single JSON value")
+			return nil, errors.New("body must only contain a single JSON value")
 		}
-		return nil
+		if v, ok := any(dst).(interface{ Validate() error }); ok {
+			err = v.Validate()
+		}
+		return dst, err
 	}
 
 	var syntaxError *json.SyntaxError
 	var unmarshalTypeError *json.UnmarshalTypeError
 	switch {
 	case errors.Is(err, io.EOF):
-		return errors.New("body must not be empty")
+		return nil, errors.New("body must not be empty")
 	case errors.Is(err, io.ErrUnexpectedEOF):
-		return errors.New("body contains badly-formed JSON")
+		return nil, errors.New("body contains badly-formed JSON")
 	case errors.As(err, &syntaxError):
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"body contains badly-formed JSON (at character %d)",
 			syntaxError.Offset,
 		)
 	case errors.As(err, &unmarshalTypeError):
 		if unmarshalTypeError.Field != "" {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"body contains incorrect JSON type for field %q",
 				unmarshalTypeError.Field,
 			)
 		}
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"body contains incorrect JSON type (at character %d)",
 			unmarshalTypeError.Offset,
 		)
 	case err.Error() == "http: request body too large":
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"body must not be larger than %d bytes", opt.maxBodySize,
 		)
 	case strings.HasPrefix(err.Error(), "json: unknown field "):
-		fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
-		return fmt.Errorf("body contains unknown key %s", fieldName)
+		fieldName := strings.Trim(
+			strings.TrimPrefix(err.Error(), "json: unknown field "), "\"")
+		return nil, fmt.Errorf("body contains unknown key %q", fieldName)
 	default:
-		return err
+		return nil, fmt.Errorf("unable to parse body: %w", err)
 	}
 }
