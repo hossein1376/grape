@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/hossein1376/grape/reqid"
@@ -13,6 +14,14 @@ import (
 type respWriter struct {
 	http.ResponseWriter
 	statusCode int
+}
+
+func (w *respWriter) Write(b []byte) (int, error) {
+	if w.statusCode == 0 {
+		w.statusCode = http.StatusOK
+		w.ResponseWriter.WriteHeader(w.statusCode)
+	}
+	return w.ResponseWriter.Write(b)
 }
 
 func (w *respWriter) WriteHeader(statusCode int) {
@@ -65,8 +74,12 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if msg := recover(); msg != nil {
-				slog.Error("Panic recovered", slog.Any("message", msg))
-				Respond(context.Background(), w, http.StatusInternalServerError, nil)
+				slog.Error(
+					"Panic recovered",
+					slog.Any("message", msg),
+					slog.String("stack", string(debug.Stack())),
+				)
+				Respond(r.Context(), w, http.StatusInternalServerError, nil)
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -96,8 +109,8 @@ func CORSMiddleware(next http.Handler) http.Handler {
 			"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
 		)
 
-		if r.Method == "OPTIONS" {
-			http.Error(w, "No Content", http.StatusNoContent)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
