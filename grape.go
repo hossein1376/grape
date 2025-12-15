@@ -25,21 +25,39 @@ type (
 )
 
 // Param attempts to extract the given parameter from path. Then, the parser
-// function is used to parse it to the expected type.
+// function is used to parse it to the expected type. If nil parser is provided,
+// it will attempt to extract and use the Parse method on the type T.
+//
 // Some of the parser functions for primitive types are: [strconv.Atoi],
 // [strconv.ParseBool], [ParseInt], [ParseUint], and [ParseFloat]. It can also
 // be manually implemented for custom types.
 //
 // Examples:
 //
-//	grape.Param(r, "boolean", strconv.ParseBool)
-//	grape.Param(r, "integer", grape.ParseInt[int16]())
-//	grape.Param(r, "float", grape.ParseFloat[float64]())
+//		grape.Param(r, "boolean", strconv.ParseBool)
+//		grape.Param(r, "integer", grape.ParseInt[int16]())
+//		grape.Param(r, "float", grape.ParseFloat[float64]())
+//
+//		grape.Param[Custom](r, "custom", nil)
+//	 /*
+//		type Custom struct {}
+//
+//		func (c Custom) Parse(s string) (Custom, error) {
+//			// custom parsing logic
+//		}
+//	 */
 func Param[T any](r *http.Request, name string, parser Parser[T]) (T, error) {
 	var t T
 	param := r.PathValue(name)
 	if param == "" {
 		return t, ErrMissingParam
+	}
+	if parser == nil {
+		p, ok := any(t).(interface{ Parse(s string) (T, error) })
+		if !ok {
+			return t, fmt.Errorf("no parser provided for type %T", t)
+		}
+		return p.Parse(param)
 	}
 	i, err := parser(param)
 	if err != nil {
