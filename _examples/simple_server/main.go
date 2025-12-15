@@ -43,7 +43,7 @@ func parameterHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := grape.Param(r, "id", strconv.Atoi)
 	if err != nil {
 		err = errs.NotFound(errs.WithErr(err), errs.WithMsg("user id not found"))
-		grape.RespondFromErr(ctx, w, err)
+		grape.ExtractFromErr(ctx, w, err)
 		return
 	}
 	grape.Respond(ctx, w, http.StatusOK, id)
@@ -59,7 +59,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slogger.Error(ctx, "reading request", slogger.Err("error", err))
 		err = errs.BadRequest(errs.WithMsg("invalid request"))
-		grape.RespondFromErr(ctx, w, err)
+		grape.ExtractFromErr(ctx, w, err)
 		return
 	}
 

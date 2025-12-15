@@ -68,7 +68,7 @@ func paramHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := grape.Param(r, "id", strconv.Atoi)
 	if err != nil {
-		grape.RespondFromErr(
+		grape.ExtractFromErr(
 			ctx,
 			w,
 			errs.BadRequest(errs.WithErr(err), errs.WithMsg("invalid id")),
@@ -104,7 +104,7 @@ error-prone logging.
 ### `errs` package
 
 Used for effortlessly conveying error details, messages and relevant status code
-between different functions and application layers . Paired with `RespondFromErr`,
+between different functions and application layers . Paired with `ExtractFromErr`,
 JSON responses can be automatically derived and written.
 
 ### `validator` package

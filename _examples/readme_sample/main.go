@@ -38,7 +38,7 @@ func paramHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := grape.Param(r, "id", strconv.Atoi)
 	if err != nil {
-		grape.RespondFromErr(
+		grape.ExtractFromErr(
 			ctx,
 			w,
 			errs.BadRequest(errs.WithErr(err), errs.WithMsg("invalid id")),

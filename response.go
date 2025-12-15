@@ -19,10 +19,7 @@ type Response struct {
 // Respond is a general function which responses with the provided message
 // and status code. It acts as an abstraction over WriteJson.
 func Respond(
-	ctx context.Context,
-	w http.ResponseWriter,
-	statusCode int,
-	data any,
+	ctx context.Context, w http.ResponseWriter, statusCode int, data any,
 ) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -36,15 +33,11 @@ func Respond(
 	WriteJSON(ctx, w, opts...)
 }
 
-// RespondFromErr extracts a response from the given error. If nil, 204 response
+// ExtractFromErr extracts a response from the given error. If nil, 204 response
 // is returned. If error is of type [errs.Error], the status code and response
 // message are filled accordingly. Otherwise, a 500 response with the request ID
 // are returned.
-func RespondFromErr(
-	ctx context.Context,
-	w http.ResponseWriter,
-	err error,
-) {
+func ExtractFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 	if err == nil {
 		Respond(ctx, w, http.StatusNoContent, nil)
 		return
