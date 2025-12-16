@@ -54,7 +54,7 @@ func (r *Router) Group(prefix string) *Router {
 	newRouter := &Router{
 		scope:       newScope,
 		routes:      make(map[string]http.Handler),
-		middlewares: r.middlewares,
+		middlewares: slices.Clone(r.middlewares),
 		root:        r.root,
 	}
 
