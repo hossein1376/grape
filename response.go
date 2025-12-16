@@ -47,7 +47,7 @@ func ExtractFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 	if errors.As(err, &e) {
 		msg := e.Message
 		if msg == "" {
-			msg = e.Err.Error()
+			msg = http.StatusText(e.HTTPStatusCode)
 		}
 		Respond(ctx, w, e.HTTPStatusCode, Response{Message: msg})
 		slogger.Debug(
