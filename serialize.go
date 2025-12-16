@@ -90,8 +90,13 @@ func WithMaxBodySize(size int64) func(*readOptions[any]) {
 	}
 }
 
-// ReadJSON will decode incoming json requests. It will return a
-// human-readable error in case of failure.
+// ReadJSON will decode incoming json requests. It will return a human-readable
+// error in case of failure. If [T] implements the following method:
+//
+//	Validate() error
+//
+// it will be called after decoding. By default, the maximum body size is 1MB,
+// which can be changed using WithMaxBodySize option.
 func ReadJSON[T any](
 	w http.ResponseWriter, r *http.Request, opts ...ReadOpts[T],
 ) (*T, error) {
