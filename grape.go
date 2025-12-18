@@ -73,7 +73,7 @@ func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	var t T
 	param := query.Get(name)
 	if param == "" {
-		return t, ErrMissingParam
+		return t, ErrMissingQuery
 	}
 	i, err := parser(param)
 	if err != nil {
