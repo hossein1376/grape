@@ -115,7 +115,7 @@ func ReadJSON[T any](
 	dst := new(T)
 	err := dec.Decode(dst)
 	if err == nil {
-		if err = dec.Decode(&struct{}{}); err != io.EOF {
+		if err := dec.Decode(&struct{}{}); err != io.EOF {
 			return nil, errors.New("body must only contain a single JSON value")
 		}
 		if v, ok := any(dst).(interface{ Validate() error }); ok {
