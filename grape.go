@@ -52,19 +52,7 @@ func Param[T any](r *http.Request, name string, parser Parser[T]) (T, error) {
 	if param == "" {
 		return t, ErrMissingParam
 	}
-	if parser == nil {
-		p, ok := any(t).(interface{ Parse(s string) (T, error) })
-		if !ok {
-			return t, fmt.Errorf("no parser provided for type %T", t)
-		}
-		return p.Parse(param)
-	}
-	i, err := parser(param)
-	if err != nil {
-		return t, fmt.Errorf("parse: %w", err)
-	}
-
-	return i, nil
+	return parse(t, param, parser)
 }
 
 // Query attempts to extract and parse the given query parameter. For more
@@ -74,6 +62,17 @@ func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	param := query.Get(name)
 	if param == "" {
 		return t, ErrMissingQuery
+	}
+	return parse(t, param, parser)
+}
+
+func parse[T any](t T, param string, parser Parser[T]) (T, error) {
+	if parser == nil {
+		p, ok := any(t).(interface{ Parse(s string) (T, error) })
+		if !ok {
+			return t, fmt.Errorf("no parser provided for type %T", t)
+		}
+		return p.Parse(param)
 	}
 	i, err := parser(param)
 	if err != nil {
