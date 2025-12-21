@@ -1,6 +1,20 @@
-## Version 1.0
+# Changelog
 
-TODO
+## Version 0.5
+
+- Fix a bug in logging response HTTP status code.
+- [BREAKING] Rename `Json` to `JSON` in read and write methods.
+- [BREAKING] Rename `RespondFromErr` to `ExtractFromErr`
+- Allow `Param` to use type's Parse when parser is nil
+- Fix a bug in the router where sometimes middlewares were incorrectly mutated.
+- Improve `errs` package.
+- Generate lexicographically, time-sortable random request IDs.
+- Add tests and improve documentation.
+- Bug fixes and improvements to various parts.
+
+## Version 0.4
+
+- Overhaul the whole project, with new API design and implementation. Too many changes to list here.
 
 ## Version 0.3
 
