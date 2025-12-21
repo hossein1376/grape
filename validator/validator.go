@@ -26,8 +26,15 @@ type ValidationError map[string][]string
 //	"field_1: validation error, field_2: first error"
 func (v ValidationError) Error() string {
 	var s []string
-	for key, value := range v {
-		for _, msg := range value {
+	// Collect keys and sort them to make the error string deterministic.
+	keys := make([]string, 0, len(v))
+	for k := range v {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	for _, key := range keys {
+		for _, msg := range v[key] {
 			s = append(s, key+": "+msg)
 		}
 	}
