@@ -2,6 +2,7 @@ package slogger
 
 import (
 	"context"
+	"encoding/hex"
 	"log/slog"
 	"os"
 )
@@ -41,6 +42,21 @@ func Err(msg string, err error) slog.Attr {
 		return slog.String(msg, "no-error")
 	}
 	return slog.String(msg, err.Error())
+}
+
+func UUID[T ~[16]byte](msg string, uuid T) slog.Attr {
+	// Based on implementation in: github.com/google/uuid
+	var dst [36]byte
+	hex.Encode(dst[:], uuid[:4])
+	dst[8] = '-'
+	hex.Encode(dst[9:13], uuid[4:6])
+	dst[13] = '-'
+	hex.Encode(dst[14:18], uuid[6:8])
+	dst[18] = '-'
+	hex.Encode(dst[19:23], uuid[8:10])
+	dst[23] = '-'
+	hex.Encode(dst[24:], uuid[10:])
+	return slog.String(msg, string(dst[:]))
 }
 
 func Debug(ctx context.Context, msg string, attrs ...slog.Attr) {
