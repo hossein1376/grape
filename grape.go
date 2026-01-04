@@ -50,7 +50,7 @@ func Param[T any](r *http.Request, name string, parser Parser[T]) (T, error) {
 	var t T
 	param := r.PathValue(name)
 	if param == "" {
-		return t, ErrMissingParam
+		return t, fmt.Errorf("%w: %s", ErrMissingParam, name)
 	}
 	return parse(t, param, parser)
 }
@@ -61,7 +61,7 @@ func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	var t T
 	param := query.Get(name)
 	if param == "" {
-		return t, ErrMissingQuery
+		return t, fmt.Errorf("%w: %s", ErrMissingQuery, name)
 	}
 	return parse(t, param, parser)
 }
