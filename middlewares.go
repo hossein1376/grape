@@ -102,7 +102,7 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		w.Header().Add("Access-Control-Allow-Credentials", "true")
 		w.Header().Add(
 			"Access-Control-Allow-Methods",
-			"POST, GET, OPTIONS, PUT, DELETE",
+			"POST, GET, OPTIONS, PUT, PATCH, DELETE",
 		)
 		w.Header().Add(
 			"Access-Control-Allow-Headers",
