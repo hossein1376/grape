@@ -29,7 +29,7 @@ func WithHTTPStatus(statusCode int) Options {
 
 // WithErrMsg sets the message of the custom [Error] type to the message of the
 // provided error. This message is intended to be user-friendly and can be
-// displayed to the end user.[]
+// displayed to the end user.
 // If the provided error is nil, the message is set to an empty string.
 func WithErrMsg(err error) Options {
 	return func(e *Error) {
