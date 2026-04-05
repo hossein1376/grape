@@ -22,9 +22,17 @@ func (c customType) Parse(s string) (customType, error) {
 func TestParamMissing(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	// No path parameter set -> should return ErrMissingParam
-	_, err := Param[int](req, "id", ParseInt[int]())
+	_, err := Param(req, "id", ParseInt[int]())
 	if !errors.Is(err, ErrMissingParam) {
 		t.Fatalf("expected ErrMissingParam, got %v", err)
+	}
+}
+
+func TestParamOrDefault(t *testing.T) {
+	req := httptest.NewRequest("GET", "/", nil)
+	v := ParamOrDefault(req, "id", ParseInt[int](), 11)
+	if v != 11 {
+		t.Fatalf("expected 11, got %d", v)
 	}
 }
 
@@ -32,7 +40,7 @@ func TestQueryParsingSuccessAndMissing(t *testing.T) {
 	values := url.Values{}
 	values.Set("n", "42")
 
-	v, err := Query[int](values, "n", ParseInt[int]())
+	v, err := Query(values, "n", ParseInt[int]())
 	if err != nil {
 		t.Fatalf("unexpected error parsing query: %v", err)
 	}
@@ -47,9 +55,17 @@ func TestQueryParsingSuccessAndMissing(t *testing.T) {
 	}
 }
 
+func TestQueryOrDefault(t *testing.T) {
+	values := url.Values{}
+	values.Set("n", "42")
+	v := QueryOrDefault(values, "m", ParseInt[int](), 22)
+	if v != 22 {
+		t.Fatalf("expected 22, got %d", v)
+	}
+}
+
 func TestParseWithNilParserUsesTypeParseMethod(t *testing.T) {
-	var zero customType
-	got, err := parse(zero, "hello", nil)
+	got, err := parse[customType]("hello", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -59,8 +75,7 @@ func TestParseWithNilParserUsesTypeParseMethod(t *testing.T) {
 }
 
 func TestParseWithProvidedParserFunction(t *testing.T) {
-	var zero int
-	res, err := parse(zero, "100", func(s string) (int, error) { return strconv.Atoi(s) })
+	res, err := parse("100", func(s string) (int, error) { return strconv.Atoi(s) })
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -116,7 +131,7 @@ func TestCheckOverflowMismatch(t *testing.T) {
 }
 
 func TestGoRecoversFromPanic(t *testing.T) {
-	// ensure Go doesn't let a panic escape
+	// ensure the function doesn't let a panic escape
 	done := make(chan struct{})
 	Go(func() {
 		defer close(done)

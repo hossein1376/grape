@@ -52,7 +52,18 @@ func Param[T any](r *http.Request, name string, parser Parser[T]) (T, error) {
 	if param == "" {
 		return t, fmt.Errorf("%w: %s", ErrMissingParam, name)
 	}
-	return parse(t, param, parser)
+	return parse(param, parser)
+}
+
+// ParamOrDefault calls [Param] under the hood, and will return the provided
+// default value if there's any error.
+func ParamOrDefault[T any](
+	r *http.Request, name string, parser Parser[T], def T,
+) T {
+	if value, err := Param(r, name, parser); err == nil {
+		return value
+	}
+	return def
 }
 
 // Query attempts to extract and parse the given query parameter. For more
@@ -63,10 +74,22 @@ func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	if param == "" {
 		return t, fmt.Errorf("%w: %s", ErrMissingQuery, name)
 	}
-	return parse(t, param, parser)
+	return parse(param, parser)
 }
 
-func parse[T any](t T, param string, parser Parser[T]) (T, error) {
+// QueryOrDefault calls [Query] under the hood, and will return the provided
+// default value if there's any error.
+func QueryOrDefault[T any](
+	query url.Values, name string, parser Parser[T], def T,
+) T {
+	if value, err := Query(query, name, parser); err == nil {
+		return value
+	}
+	return def
+}
+
+func parse[T any](param string, parser Parser[T]) (T, error) {
+	var t T
 	if parser == nil {
 		p, ok := any(t).(interface{ Parse(s string) (T, error) })
 		if !ok {
@@ -83,7 +106,8 @@ func parse[T any](t T, param string, parser Parser[T]) (T, error) {
 }
 
 // ParseInt will attempt to parse the given input into an integer of the
-// specified type. It can be used as an argument to the [Param] function.
+// specified type. It can be used as an argument to the [Param] or similar
+// functions.
 func ParseInt[
 	T ~int | ~int64 | ~int32 | ~int16 | ~int8,
 ]() func(string) (T, error) {
@@ -97,7 +121,8 @@ func ParseInt[
 }
 
 // ParseUint will attempt to parse the given input into an unsigned integer of
-// the specified type. It can be used as an argument to the [Param] function.
+// the specified type. It can be used as an argument to the [Param] or similar
+// functions.
 func ParseUint[
 	T ~uint | ~uint64 | ~uint32 | ~uint16 | ~uint8,
 ]() func(string) (T, error) {
@@ -111,7 +136,8 @@ func ParseUint[
 }
 
 // ParseFloat will attempt to parse the given input into a floating point number
-// of the specified type. It can be used as an argument to the [Param] function.
+// of the specified type. It can be used as an argument to the [Param] or
+// similar functions.
 func ParseFloat[T ~float64 | ~float32]() func(string) (T, error) {
 	return func(s string) (T, error) {
 		i, err := strconv.ParseFloat(s, 64)
@@ -124,7 +150,7 @@ func ParseFloat[T ~float64 | ~float32]() func(string) (T, error) {
 
 func checkOverflow[T any](s string, t T) (T, error) {
 	if fmt.Sprintf("%v", t) != s {
-		return t, ErrOverflow
+		return t, fmt.Errorf("%w: %s doesn't fit in %T", ErrOverflow, s, t)
 	}
 	return t, nil
 }
