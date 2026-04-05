@@ -190,3 +190,11 @@ func Unique[T cmp.Ordered](values []T) bool {
 	slices.Sort(s)
 	return len(slices.Compact(s)) == len(values)
 }
+
+// Zero checks if the given value is equals to 0.
+func Zero[
+	T ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 |
+		~uint32 | ~uint64 | ~float32 | ~float64,
+](value T) bool {
+	return value == 0
+}
