@@ -19,7 +19,7 @@ to your projects.
 
 ## Installation
 
-You need Go version 1.25 or higher.
+You need Go version 1.22 or higher.
 
 ```shell
 go get -u github.com/hossein1376/grape@latest
