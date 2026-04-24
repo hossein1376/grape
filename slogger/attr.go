@@ -2,8 +2,28 @@ package slogger
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 )
+
+func Err(msg string, err error) slog.Attr {
+	if err == nil {
+		return slog.String(msg, "no-error")
+	}
+	return slog.String(msg, err.Error())
+}
+
+func String[T fmt.Stringer](msg string, s T) slog.Attr {
+	return slog.String(msg, s.String())
+}
+
+type number interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~float32 | ~float64
+}
+
+func Number[T number](msg string, num T) slog.Attr {
+	return slog.String(msg, fmt.Sprintf("%v", num))
+}
 
 type slogAttr string
 
