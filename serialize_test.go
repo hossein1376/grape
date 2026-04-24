@@ -127,7 +127,7 @@ func TestReadJSON_ValidateFails(t *testing.T) {
 	)
 	req.Header.Set("Content-Type", "application/json")
 
-	_, err := ReadJSON[payloadWithValidate](rec, req)
+	_, err := ReadValidateJSON[payloadWithValidate](rec, req)
 	if err == nil || !strings.Contains(err.Error(), "name required") {
 		t.Fatalf("expected validation error, got %v", err)
 	}

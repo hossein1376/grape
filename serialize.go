@@ -91,12 +91,8 @@ func WithMaxBodySize(size int64) func(*readOptions[any]) {
 }
 
 // ReadJSON will decode incoming json requests. It will return a human-readable
-// error in case of failure. If [T] implements the following method:
-//
-//	Validate() error
-//
-// it will be called after decoding. By default, the maximum body size is 1MB,
-// which can be changed using WithMaxBodySize option.
+// error in case of failure. By default, the maximum body size is 1MB, which can
+// be changed using WithMaxBodySize option.
 func ReadJSON[T any](
 	w http.ResponseWriter, r *http.Request, opts ...ReadOpts[T],
 ) (*T, error) {
@@ -118,10 +114,7 @@ func ReadJSON[T any](
 		if err := dec.Decode(&struct{}{}); err != io.EOF {
 			return nil, errors.New("body must only contain a single JSON value")
 		}
-		if v, ok := any(dst).(interface{ Validate() error }); ok {
-			err = v.Validate()
-		}
-		return dst, err
+		return dst, nil
 	}
 
 	var syntaxError *json.SyntaxError
@@ -153,9 +146,24 @@ func ReadJSON[T any](
 		)
 	case strings.HasPrefix(err.Error(), "json: unknown field "):
 		fieldName := strings.Trim(
-			strings.TrimPrefix(err.Error(), "json: unknown field "), "\"")
+			strings.TrimPrefix(err.Error(), "json: unknown field "), "\"",
+		)
 		return nil, fmt.Errorf("body contains unknown key %q", fieldName)
 	default:
 		return nil, fmt.Errorf("unable to parse body: %w", err)
 	}
+}
+
+// ReadValidateJSON reads and validates the json input.
+func ReadValidateJSON[T Validator](
+	w http.ResponseWriter, r *http.Request, opts ...ReadOpts[T],
+) (*T, error) {
+	t, err := ReadJSON(w, r, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if err := (*t).Validate(); err != nil {
+		return nil, fmt.Errorf("validate: %w", err)
+	}
+	return t, nil
 }

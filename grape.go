@@ -22,6 +22,7 @@ var (
 type (
 	Map           = map[string]any
 	Parser[T any] func(s string) (T, error)
+	Validator     interface{ Validate() error }
 )
 
 // Param attempts to extract the given parameter from path. Then, the parser
