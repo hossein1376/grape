@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"encoding/binary"
-	mathrand "math/rand"
+	mathrand "math/rand/v2"
 	"time"
 )
 
@@ -50,9 +50,8 @@ func text() string {
 	// fill remaining 10 bytes with crypto random
 	if _, err := rand.Read(buf[6:]); err != nil {
 		// fallback to math/rand seeded with current time if crypto fails
-		seeded := mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
 		for i := 6; i < len(buf); i++ {
-			buf[i] = byte(seeded.Intn(256))
+			buf[i] = byte(mathrand.IntN(256))
 		}
 	}
 
