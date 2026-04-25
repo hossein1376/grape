@@ -4,20 +4,9 @@ import (
 	"errors"
 	"net/http/httptest"
 	"net/url"
-	"strconv"
 	"testing"
 	"time"
 )
-
-// customType demonstrates a type that implements Parse(s string) (T, error)
-// so parse(..., nil) should call this method.
-type customType struct {
-	V string
-}
-
-func (c customType) Parse(s string) (customType, error) {
-	return customType{V: s}, nil
-}
 
 func TestParamMissing(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
@@ -25,6 +14,14 @@ func TestParamMissing(t *testing.T) {
 	_, err := Param(req, "id", ParseInt[int]())
 	if !errors.Is(err, ErrMissingParam) {
 		t.Fatalf("expected ErrMissingParam, got %v", err)
+	}
+}
+
+func TestParamNilParser(t *testing.T) {
+	req := httptest.NewRequest("GET", "/", nil)
+	_, err := Param[string](req, "id", nil)
+	if !errors.Is(err, ErrNilParser) {
+		t.Fatalf("expected ErrNilParser, got %v", err)
 	}
 }
 
@@ -49,9 +46,18 @@ func TestQueryParsingSuccessAndMissing(t *testing.T) {
 	}
 
 	// missing query -> ErrMissingQuery
-	_, err = Query[string](values, "missing", nil)
+	_, err = Query(values, "missing", ParseInt[int]())
 	if !errors.Is(err, ErrMissingQuery) {
 		t.Fatalf("expected ErrMissingQuery, got %v", err)
+	}
+}
+
+func TestQueryNilParser(t *testing.T) {
+	values := url.Values{}
+	values.Set("n", "42")
+	_, err := Query[string](values, "n", nil)
+	if !errors.Is(err, ErrNilParser) {
+		t.Fatalf("expected ErrNilParser, got %v", err)
 	}
 }
 
@@ -61,26 +67,6 @@ func TestQueryOrDefault(t *testing.T) {
 	v := QueryOrDefault(values, "m", ParseInt[int](), 22)
 	if v != 22 {
 		t.Fatalf("expected 22, got %d", v)
-	}
-}
-
-func TestParseWithNilParserUsesTypeParseMethod(t *testing.T) {
-	got, err := parse[customType]("hello", nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got.V != "hello" {
-		t.Fatalf("expected parsed value 'hello', got %q", got.V)
-	}
-}
-
-func TestParseWithProvidedParserFunction(t *testing.T) {
-	res, err := parse("100", func(s string) (int, error) { return strconv.Atoi(s) })
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if res != 100 {
-		t.Fatalf("expected 100 got %d", res)
 	}
 }
 

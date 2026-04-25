@@ -16,6 +16,7 @@ const defaultMaxBodySize = 1_048_576 // 1mb
 var (
 	ErrMissingParam = errors.New("path parameter not found")
 	ErrMissingQuery = errors.New("query parameter not found")
+	ErrNilParser    = errors.New("nil parser provided")
 	ErrOverflow     = errors.New("value overflow")
 )
 
@@ -26,12 +27,10 @@ type (
 )
 
 // Param attempts to extract the given parameter from path. Then, the parser
-// function is used to parse it to the expected type. If nil parser is provided,
-// it will attempt to extract and use the Parse method on the type T.
+// function is used to parse it to the expected type.
 //
 // Some of the parser functions for primitive types are: [strconv.Atoi],
-// [strconv.ParseBool], [ParseInt], [ParseUint], and [ParseFloat]. It can also
-// be manually implemented for custom types.
+// [strconv.ParseBool], [ParseInt], [ParseUint], and [ParseFloat].
 //
 // Examples:
 //
@@ -39,21 +38,25 @@ type (
 //		grape.Param(r, "integer", grape.ParseInt[int16]())
 //		grape.Param(r, "float", grape.ParseFloat[float64]())
 //
-//		grape.Param[Custom](r, "custom", nil)
+//		grape.Param(r, "custom", ParseCustom)
 //	 /*
 //		type Custom struct {}
-//
-//		func (c Custom) Parse(s string) (Custom, error) {
-//			// custom parsing logic
-//		}
+//		func ParseCustom(s string) (Custom, error) {}
 //	 */
 func Param[T any](r *http.Request, name string, parser Parser[T]) (T, error) {
 	var t T
+	if parser == nil {
+		return t, ErrNilParser
+	}
 	param := r.PathValue(name)
 	if param == "" {
 		return t, fmt.Errorf("%w: %s", ErrMissingParam, name)
 	}
-	return parse(param, parser)
+	value, err := parser(param)
+	if err != nil {
+		return t, fmt.Errorf("parse: %w", err)
+	}
+	return value, nil
 }
 
 // ParamOrDefault calls [Param] under the hood, and will return the provided
@@ -71,11 +74,18 @@ func ParamOrDefault[T any](
 // details, refer to the [Param] func.
 func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	var t T
+	if parser == nil {
+		return t, ErrNilParser
+	}
 	param := query.Get(name)
 	if param == "" {
 		return t, fmt.Errorf("%w: %s", ErrMissingQuery, name)
 	}
-	return parse(param, parser)
+	value, err := parser(param)
+	if err != nil {
+		return t, fmt.Errorf("parse: %w", err)
+	}
+	return value, nil
 }
 
 // QueryOrDefault calls [Query] under the hood, and will return the provided
@@ -87,23 +97,6 @@ func QueryOrDefault[T any](
 		return value
 	}
 	return def
-}
-
-func parse[T any](param string, parser Parser[T]) (T, error) {
-	var t T
-	if parser == nil {
-		p, ok := any(t).(interface{ Parse(s string) (T, error) })
-		if !ok {
-			return t, fmt.Errorf("no parser provided for type %T", t)
-		}
-		return p.Parse(param)
-	}
-	i, err := parser(param)
-	if err != nil {
-		return t, fmt.Errorf("parse: %w", err)
-	}
-
-	return i, nil
 }
 
 // ParseInt will attempt to parse the given input into an integer of the
