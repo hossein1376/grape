@@ -1,5 +1,31 @@
 # Changelog
 
+## Version 0.6
+
+### grape
+
+- Improve `Param` and `Query` error messages.
+- All `PATCH` method to the CORS middleware.
+- Revert minimum required Go version to 1.22.
+- Created new `ParamOrDefault` and `QueryOrDefault` functions.
+- Fallback to `math/rand/v2` to generate request IDs if `crypto/rand` fails.
+- Introduce the `Validator` interface and `ReadValidateJSON` function.
+- Remove implicit Parse method in favor of explicit parse functions.
+- Update documentations and test cases.
+
+### errs
+
+- Add new `WithErrMsg` optional func.
+- Document options.
+
+### slogger
+
+- Add `String` and `Number` attribute functions.
+
+### validator
+
+- Added the `Zero` predicate.
+
 ## Version 0.5
 
 - Fix a bug in logging response HTTP status code.
