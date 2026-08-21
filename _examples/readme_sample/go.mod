@@ -1,6 +1,6 @@
 module readme_sample
 
-go 1.22
+go 1.27
 
 replace github.com/hossein1376/grape => ../../
 
