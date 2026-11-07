@@ -42,7 +42,8 @@ func (v ValidationError) Error() string {
 // Validator collects validation errors per field, in [Validator.Errors]. Rules
 // are added with the [Validator.String], [Validator.Number], and
 // [Validator.Slice] rule chains, or with [Validator.Check] for custom
-// conditions. [Validator.Err] returns the result as an error. The zero value
+// conditions. Nested structs and slices are added with [Validator.Nested] and
+// [Validator.Each]. [Validator.Err] returns the result as an error. The zero value
 // is ready to use.
 type Validator struct {
 	Errors ValidationError `json:"errors"`

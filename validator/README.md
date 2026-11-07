@@ -57,6 +57,56 @@ returns a `validator.ValidationError`:
 - `Unique` needs comparable items. For others, give `UniqueBy` a key:
   `v.Slice("users", s.Users).UniqueBy(func(u User) string { return u.Email })`.
 
+## Nested structs and slices
+
+Give nested types their own `Validate() error`, and merge the results with
+`Nested`. Its field errors are added under prefixed keys:
+
+```go
+type order struct {
+	Billing address     `json:"billing"`
+	Items   []*lineItem `json:"items"`
+}
+
+func (o order) Validate() error {
+	v := validator.New()
+	v.Nested("billing", o.Billing.Validate())
+	v.Slice("items", o.Items).Required().MaxLen(50)
+	v.Each("items", o.Items, (*lineItem).Validate)
+	return v.Err()
+}
+```
+
+```json
+{
+  "billing.city": ["must not be empty"],
+  "items[1].qty": ["must be at least 1"],
+  "items[1].ship.zip": ["must contain only digits"]
+}
+```
+
+- `Each` validates every item of a slice, under the key and the item's index.
+  A method expression gives it the item type: `Item.Validate` for a value
+  receiver, or `(*Item).Validate` for a pointer receiver with a `[]*Item`
+  slice. Nil pointers are passed to it as is.
+- For items without a `Validate` method, pass a function. A chain with an
+  empty key reports under the item itself, e.g. `emails[1]`:
+
+  ```go
+  v.Each("emails", s.Emails, func(email string) error {
+  	v := validator.New()
+  	v.String("", email).Matches(emailRE)
+  	return v.Err()
+  })
+  ```
+
+- Nesting composes to any depth, since each level is just an error.
+- `Nested` with an empty key adds the fields as is, e.g. for an embedded
+  struct. Any non-validation error is added under the key with its text as
+  the message.
+- Guard optional fields yourself:
+  `if s.Address != nil { v.Nested("address", s.Address.Validate()) }`.
+
 ## Custom conditions
 
 For anything the chains don't cover, use `Check` with any boolean condition.
