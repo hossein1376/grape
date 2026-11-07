@@ -8,9 +8,8 @@ import (
 	"unicode/utf8"
 )
 
-// Case is a test-case, consisting of two parts. Cond will call a function that
-// returns a boolean. If it returns false, Msg will be added to the
-// [Validator.Errors].
+// Case is a test-case for [Validator.Check], consisting of two parts. If Cond
+// is false, Msg will be added to the [Validator.Errors].
 type Case struct {
 	Cond bool
 	Msg  string
@@ -40,9 +39,11 @@ func (v ValidationError) Error() string {
 	return strings.Join(s, ", ")
 }
 
-// Validator will check for cases by [Check] method and will return a boolean
-// with the [Validate] method. If a validation error happens, the Msg will be
-// stored inside the [Errors] map.
+// Validator collects validation errors per field, in [Validator.Errors]. Rules
+// are added with the [Validator.String], [Validator.Number], and
+// [Validator.Slice] rule chains, or with [Validator.Check] for custom
+// conditions. [Validator.Err] returns the result as an error. The zero value
+// is ready to use.
 type Validator struct {
 	Errors ValidationError `json:"errors"`
 }
@@ -53,7 +54,8 @@ func New() *Validator {
 }
 
 // Check accepts name of the field as the first argument, following by an
-// arbitrary number of validation Case.
+// arbitrary number of validation Case. Unlike rule chains, it reports every
+// failing case.
 func (v *Validator) Check(key string, cases ...Case) {
 	for _, c := range cases {
 		if !c.Cond {
@@ -65,6 +67,16 @@ func (v *Validator) Check(key string, cases ...Case) {
 // Validate returns a boolean indicating whether validation was successful or not.
 func (v Validator) Validate() bool {
 	return len(v.Errors) == 0
+}
+
+// Err returns [Validator.Errors] as an error if there are any, and nil
+// otherwise. Use it to implement Validate() error methods: returning Errors
+// directly would always give a non-nil error, even when it's empty.
+func (v *Validator) Err() error {
+	if len(v.Errors) == 0 {
+		return nil
+	}
+	return v.Errors
 }
 
 func (v *Validator) addError(key, message string) {
@@ -202,9 +214,6 @@ func Unique[T cmp.Ordered](values []T) bool {
 }
 
 // Zero checks if the given value is equals to 0.
-func Zero[
-	T ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 |
-		~uint32 | ~uint64 | ~float32 | ~float64,
-](value T) bool {
+func Zero[T number](value T) bool {
 	return value == 0
 }
