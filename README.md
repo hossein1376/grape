@@ -109,9 +109,11 @@ JSON responses can be automatically derived and written.
 
 ### `validator` package
 
-Presenting wide range of functions for data validation. Start a new instance with
-`validator.New()` and then use `Check` on each part of your data with as many
-`Case` it's necessary.
+Type-safe validation rule chains, such as
+`v.String("name", req.Name).Required().MaxLen(50)` and
+`v.Number("age", req.Age).Range(0, 130)`, with default error messages. Paired
+with `ExtractFromErr`, field errors are sent as a 400 response. See the
+[validator README](validator/README.md).
 
 ## Why?
 

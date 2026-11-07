@@ -24,53 +24,36 @@ func main() {
 	}
 }
 
+type createUserRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Age      int    `json:"age"`
+}
+
+func (req createUserRequest) Validate() error {
+	v := validator.New()
+	v.String("username", req.Username).Required().MaxLen(10)
+	v.String("password", req.Password).Required().MinLen(6)
+	v.Number("age", req.Age).Range(0, 99)
+	return v.Err()
+}
+
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
-	type request struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Age      int    `json:"age"`
-	}
 	ctx := r.Context()
 
-	req, err := grape.ReadJSON[request](w, r)
+	req, err := grape.ReadJSON[createUserRequest](w, r)
 	if err != nil {
-		err = errs.BadRequest(errs.WithErr(err))
+		// Decoding errors are written for humans, so they're safe to show.
+		grape.ExtractFromErr(ctx, w, errs.BadRequest(errs.WithErrMsg(err)))
+		return
+	}
+	if err := req.Validate(); err != nil {
+		// Responds 400 with the field errors, e.g.
+		// {"message":"Bad Request","data":{"age":["must be between 0 and 99"]}}
 		grape.ExtractFromErr(ctx, w, err)
 		return
 	}
 
-	v := validator.New()
-	v.Check("username",
-		validator.Case{
-			Cond: validator.Not(validator.Empty(req.Username)),
-			Msg:  "must not be empty",
-		},
-		validator.Case{
-			Cond: validator.LengthMax(req.Username, 10),
-			Msg:  "must not be over 10 characters",
-		},
-	)
-	v.Check("password",
-		validator.Case{
-			Cond: validator.Not(validator.Empty(req.Password)),
-			Msg:  "must not be empty",
-		},
-		validator.Case{
-			Cond: validator.LengthMin(req.Password, 6),
-			Msg:  "must be at least 6 characters",
-		},
-	)
-	v.Check("age",
-		validator.Case{
-			Cond: validator.Range(req.Age, 0, 99),
-			Msg:  "must be between 0 and 99",
-		},
-	)
-	if ok := v.Validate(); !ok {
-		grape.Respond(ctx, w, http.StatusBadRequest, err)
-		return
-	}
-
-	slogger.Info(ctx, "create user handler", slog.Any("request", req))
+	slogger.Info(ctx, "create user handler", slog.String("username", req.Username))
 	grape.Respond(ctx, w, http.StatusNoContent, nil)
 }

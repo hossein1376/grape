@@ -1,64 +1,84 @@
 # Validator
 
-## Example
+Explicit, type-safe validation without struct tags or reflection.
+
+Start with `validator.New()` (or a zero `Validator`), add rules per field, and
+return `v.Err()`, which is `nil` when everything passed.
 
 ```go
-package main
-
-import (
-	"fmt"
-	"regexp"
-
-	"github.com/hossein1376/grape/validator"
-)
-
-type data struct {
-	Name  string
-	Age   int
-	Email string
-	Phone string
+type signup struct {
+	Username string   `json:"username"`
+	Email    string   `json:"email"`
+	Age      int      `json:"age"`
+	Role     string   `json:"role"`
+	Tags     []string `json:"tags"`
 }
 
-func main() {
-	simpleValidation()
-	multiValidation()
-}
+var emailRE = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 
-func simpleValidation() {
-	d := data{Name: "", Age: -2, Email: "asdf"}
-	emailRE := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-
+func (s signup) Validate() error {
 	v := validator.New()
-	v.Check("name", validator.Case{Cond: validator.Not(validator.Empty(d.Name)), Msg: "must not be empty"})
-	v.Check("age", validator.Case{Cond: validator.Min(d.Age, 0), Msg: "must not be positive"})
-	v.Check("email", validator.Case{Cond: validator.Matches(d.Email, emailRE), Msg: "must be valid email"})
-
-	if ok := v.Validate(); !ok {
-		fmt.Println("simpleValidation:", v.Errors)
-		// name: must not be empty, age: must not be positive, email: must be valid email
-		return
-	}
-	fmt.Println("Valid input!")
-}
-
-func multiValidation() {
-	d := data{Name: "", Phone: "123a"}
-
-	v := validator.New()
-	v.Check("name",
-		validator.Case{Cond: validator.Not(validator.Empty(d.Name)), Msg: "must not be empty"},
-		validator.Case{Cond: validator.LengthMin(d.Name, 2), Msg: "must not be less than 2 characters"},
-	)
-	v.Check("phone",
-		validator.Case{Cond: validator.IsNumber(d.Phone), Msg: "must be only numbers"},
-		validator.Case{Cond: validator.LengthRange(d.Phone, 4, 10), Msg: "must be between 4 to 10 digits"},
-	)
-
-	if ok := v.Validate(); !ok {
-		fmt.Println("multiValidation:", v.Errors)
-		// phone: must be only numbers, name: must not be empty, name: must not be less than 2 characters
-		return
-	}
-	fmt.Println("Valid input!")
+	v.String("username", s.Username).Required().LenRange(3, 20)
+	v.String("email", s.Email).Required().Matches(emailRE).Msg("must be a valid email")
+	v.Number("age", s.Age).Range(13, 130)
+	v.String("role", s.Role).In("admin", "member")
+	v.Slice("tags", s.Tags).MaxLen(5).Unique()
+	return v.Err()
 }
 ```
+
+For `signup{Username: "", Email: "x", Age: 7, Role: "member"}`, `Validate`
+returns a `validator.ValidationError`:
+
+```json
+{
+  "age": ["must be between 13 and 130"],
+  "email": ["must be a valid email"],
+  "username": ["must not be empty"]
+}
+```
+
+## Rule chains
+
+| Chain | Rules |
+|---|---|
+| `v.String(key, s)` | `Required`, `MinLen`, `MaxLen`, `LenRange`, `Digits`, `Matches`, `In`, `StartsWith`, `EndsWith`, `Contains` |
+| `v.Number(key, n)` | `NotZero`, `Min`, `Max`, `Range`, `In` |
+| `v.Slice(key, s)` | `Required`, `Len`, `MinLen`, `MaxLen`, `LenRange`, `Unique`, `UniqueBy` |
+
+- The value's type is inferred, including named types such as
+  `type Role string`, and `In` takes values of that type.
+- String lengths are counted in runes, not bytes.
+- A chain stops at its first failing rule, so each field gets one error: an
+  empty username reports "must not be empty", not also "must be at least 3
+  characters".
+- Every rule has a default message. `.Msg("...")` right after a rule replaces
+  it, and only takes effect if that rule failed.
+- `Unique` needs comparable items. For others, give `UniqueBy` a key:
+  `v.Slice("users", s.Users).UniqueBy(func(u User) string { return u.Email })`.
+
+## Custom conditions
+
+For anything the chains don't cover, use `Check` with any boolean condition.
+Unlike chains, it reports every failing case. The predicate functions, such as
+`validator.Min`, `validator.LengthMax` and `validator.Unique`, can be used here
+or on their own.
+
+```go
+v.Check("end_date",
+	validator.Case{Cond: s.End.After(s.Start), Msg: "must be after start_date"},
+)
+```
+
+## With grape
+
+`grape.ReadValidateJSON` decodes the body and calls `Validate`.
+`grape.ExtractFromErr` responds to a `ValidationError` with 400 and the field
+errors:
+
+```json
+{"message": "Bad Request", "data": {"age": ["must be between 13 and 130"]}}
+```
+
+See [`_examples/validator`](../_examples/validator/main.go) for a complete
+handler.
