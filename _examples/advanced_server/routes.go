@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/hossein1376/grape"
-	"github.com/hossein1376/grape/errs"
 	"github.com/hossein1376/grape/slogger"
 )
 
@@ -24,7 +23,7 @@ func createPermitHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req, err := grape.ReadJSON[createPermitRequest](w, r)
 	if err != nil {
-		err = errs.BadRequest(errs.WithErr(err))
+		// ReadJSON's errors carry their status (400, 413 or 415) and message.
 		grape.ExtractFromErr(ctx, w, err)
 		return
 	}
@@ -38,12 +37,12 @@ func getPermitByID(w http.ResponseWriter, r *http.Request) {
 
 	pid, err := grape.Param(r, "pid", grape.ParseInt[int64]())
 	if err != nil {
-		slogger.Info(ctx, "invalid parameter", slogger.Err("error", err))
-		err = errs.BadRequest(errs.WithMsg("invalid id"))
+		// 400 with `invalid path parameter "pid"`.
+		grape.ExtractFromErr(ctx, w, err)
 		return
 	}
 
-	grape.Respond(ctx, w, http.StatusCreated, grape.Map{"id": pid})
+	grape.Respond(ctx, w, http.StatusOK, grape.Map{"id": pid})
 }
 
 func getUserPermits(w http.ResponseWriter, r *http.Request) {

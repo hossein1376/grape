@@ -10,6 +10,9 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
+
+	"github.com/hossein1376/grape/errs"
 )
 
 const defaultMaxBodySize = 1_048_576 // 1mb
@@ -29,6 +32,12 @@ type (
 
 // Param attempts to extract the given parameter from path. Then, the parser
 // function is used to parse it to the expected type.
+//
+// Errors caused by the request are [errs.Error] values with status 400, so
+// [ExtractFromErr] responds accordingly: an empty value for a wildcard of the
+// matched route, or one the parser rejects. An [errs.Error] returned by the
+// parser is kept as is. A name the matched route has no wildcard for is a
+// programming error, and is reported as a plain error.
 //
 // Some of the parser functions for primitive types are: [strconv.Atoi],
 // [strconv.ParseBool], [ParseInt], [ParseUint], and [ParseFloat].
@@ -51,13 +60,38 @@ func Param[T any](r *http.Request, name string, parser Parser[T]) (T, error) {
 	}
 	param := r.PathValue(name)
 	if param == "" {
-		return t, fmt.Errorf("%w: %s", ErrMissingParam, name)
+		err := fmt.Errorf("%w: %s", ErrMissingParam, name)
+		if !hasWildcard(r.Pattern, name) {
+			return t, err
+		}
+		return t, errs.BadRequest(
+			errs.WithErr(err),
+			errs.WithMsg(fmt.Sprintf("path parameter %q is required", name)),
+		)
 	}
 	value, err := parser(param)
 	if err != nil {
-		return t, fmt.Errorf("parse: %w", err)
+		return t, invalidInput("path", name, err)
 	}
 	return value, nil
+}
+
+// hasWildcard reports whether pattern has a {name} or {name...} wildcard.
+func hasWildcard(pattern, name string) bool {
+	return strings.Contains(pattern, "{"+name+"}") ||
+		strings.Contains(pattern, "{"+name+"...}")
+}
+
+// invalidInput returns the error for a path or query parameter the parser
+// rejected: a 400 [errs.Error], unless the parser returned an [errs.Error].
+func invalidInput(kind, name string, err error) error {
+	if _, ok := asError(err); ok {
+		return fmt.Errorf("parse: %w", err)
+	}
+	return errs.BadRequest(
+		errs.WithErr(fmt.Errorf("parse %s: %w", name, err)),
+		errs.WithMsg(fmt.Sprintf("invalid %s parameter %q", kind, name)),
+	)
 }
 
 // ParamOrDefault calls [Param] under the hood, and will return the provided
@@ -72,7 +106,8 @@ func ParamOrDefault[T any](
 }
 
 // Query attempts to extract and parse the given query parameter. For more
-// details, refer to the [Param] func.
+// details, refer to the [Param] func. A missing or empty parameter, and one the
+// parser rejects, are reported as 400 [errs.Error] values.
 func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	var t T
 	if parser == nil {
@@ -80,11 +115,14 @@ func Query[T any](query url.Values, name string, parser Parser[T]) (T, error) {
 	}
 	param := query.Get(name)
 	if param == "" {
-		return t, fmt.Errorf("%w: %s", ErrMissingQuery, name)
+		return t, errs.BadRequest(
+			errs.WithErr(fmt.Errorf("%w: %s", ErrMissingQuery, name)),
+			errs.WithMsg(fmt.Sprintf("query parameter %q is required", name)),
+		)
 	}
 	value, err := parser(param)
 	if err != nil {
-		return t, fmt.Errorf("parse: %w", err)
+		return t, invalidInput("query", name, err)
 	}
 	return value, nil
 }

@@ -135,10 +135,16 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 }
 
 // RecoverMiddleware will recover from panics. It will display a log in error
-// level, with the error message. [http.ErrAbortHandler] panics are passed on,
-// so net/http aborts the response as intended.
+// level, with the error message, and respond with 500 and the request ID, as
+// [ExtractFromErr] does.
+//
+// If the response had already started, a 500 can't be sent anymore, so the
+// connection is aborted instead; the client sees a failed request rather than
+// a truncated one that looks complete. [http.ErrAbortHandler] panics are
+// passed on, so net/http aborts the response as intended.
 func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rw := &respWriter{ResponseWriter: w}
 		defer func() {
 			msg := recover()
 			if msg == nil {
@@ -153,9 +159,12 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 				slog.Any("message", msg),
 				slog.String("stack", string(debug.Stack())),
 			)
-			Respond(r.Context(), w, http.StatusInternalServerError, nil)
+			if rw.wroteHeader || rw.hijacked {
+				panic(http.ErrAbortHandler)
+			}
+			respondInternal(r.Context(), w)
 		}()
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(rw, r)
 	})
 }
 

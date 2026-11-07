@@ -84,6 +84,12 @@ func ExtractFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 	}
 
 	slogger.Error(ctx, "internal error", slogger.Err("error", err))
+	respondInternal(ctx, w)
+}
+
+// respondInternal writes a 500 response with the request ID as data, so it
+// can be matched with the logs.
+func respondInternal(ctx context.Context, w http.ResponseWriter) {
 	reqID, _ := reqid.RequestID(ctx)
 	Respond(
 		ctx,

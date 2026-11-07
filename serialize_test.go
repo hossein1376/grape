@@ -1,6 +1,8 @@
 package grape
 
 import (
+	"github.com/hossein1376/grape/errs"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -159,8 +161,10 @@ func TestReadJSON_ContentTypeMismatch(t *testing.T) {
 	req.Header.Set("Content-Type", "text/plain")
 
 	_, err := ReadJSON[personPayload](rec, req)
-	if err == nil || err.Error() != "content type is not application/json" {
-		t.Fatalf("expected content type error, got %v", err)
+	var e errs.Error
+	if !errors.As(err, &e) || e.HTTPStatusCode != http.StatusUnsupportedMediaType ||
+		e.Message != "content type must be application/json" {
+		t.Fatalf("expected a 415 content type error, got %v", err)
 	}
 }
 

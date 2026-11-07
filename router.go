@@ -49,7 +49,7 @@ func (rt *root) serveHandler() http.Handler {
 	if h := rt.handler.Load(); h != nil {
 		return *h
 	}
-	var h http.Handler = rt.mux
+	h := muxErrors(rt.mux)
 	for _, middleware := range rt.global {
 		h = middleware(h)
 	}
@@ -153,6 +153,55 @@ func (r *Router) Serve(addr string, server *http.Server) error {
 	server.Addr = addr
 	server.Handler = r
 	return server.ListenAndServe()
+}
+
+// muxErrors replaces the plain-text 404 Not Found and 405 Method Not Allowed
+// responses of mux with JSON ones, like other grape responses. The Allow header
+// of 405 responses is kept. Responses of registered handlers, including their
+// own 404s, and mux's redirects are left alone.
+func muxErrors(mux *http.ServeMux) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// mux reports an empty pattern only when no route matches, i.e. for
+		// its own 404 and 405 responses.
+		if _, pattern := mux.Handler(r); pattern != "" {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		mux.ServeHTTP(&muxErrorWriter{ResponseWriter: w, r: r}, r)
+	})
+}
+
+// muxErrorWriter writes a JSON body in place of mux's plain-text one.
+type muxErrorWriter struct {
+	http.ResponseWriter
+	r        *http.Request
+	replaced bool
+}
+
+func (w *muxErrorWriter) WriteHeader(statusCode int) {
+	if statusCode != http.StatusNotFound &&
+		statusCode != http.StatusMethodNotAllowed {
+		w.ResponseWriter.WriteHeader(statusCode)
+		return
+	}
+	w.replaced = true
+	Respond(
+		w.r.Context(),
+		w.ResponseWriter,
+		statusCode,
+		Response{Message: http.StatusText(statusCode)},
+	)
+}
+
+func (w *muxErrorWriter) Write(b []byte) (int, error) {
+	if w.replaced {
+		return len(b), nil
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *muxErrorWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
 }
 
 func (r *Router) withMiddlewares(handler http.Handler) http.Handler {

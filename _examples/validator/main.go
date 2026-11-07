@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/hossein1376/grape"
-	"github.com/hossein1376/grape/errs"
 	"github.com/hossein1376/grape/slogger"
 	"github.com/hossein1376/grape/validator"
 )
@@ -41,14 +40,10 @@ func (req createUserRequest) Validate() error {
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	req, err := grape.ReadJSON[createUserRequest](w, r)
+	req, err := grape.ReadValidateJSON[createUserRequest](w, r)
 	if err != nil {
-		// Decoding errors are written for humans, so they're safe to show.
-		grape.ExtractFromErr(ctx, w, errs.BadRequest(errs.WithErrMsg(err)))
-		return
-	}
-	if err := req.Validate(); err != nil {
-		// Responds 400 with the field errors, e.g.
+		// Decoding errors respond 400, 413 or 415 with a message. Validation
+		// errors respond 400 with the field errors, e.g.
 		// {"message":"Bad Request","data":{"age":["must be between 0 and 99"]}}
 		grape.ExtractFromErr(ctx, w, err)
 		return

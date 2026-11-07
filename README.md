@@ -36,7 +36,6 @@ import (
 	"strconv"
 
 	"github.com/hossein1376/grape"
-	"github.com/hossein1376/grape/errs"
 	"github.com/hossein1376/grape/slogger"
 )
 
@@ -68,11 +67,8 @@ func paramHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := grape.Param(r, "id", strconv.Atoi)
 	if err != nil {
-		grape.ExtractFromErr(
-			ctx,
-			w,
-			errs.BadRequest(errs.WithErr(err), errs.WithMsg("invalid id")),
-		)
+		// Responds 400: {"message":"invalid path parameter \"id\""}
+		grape.ExtractFromErr(ctx, w, err)
 		return
 	}
 
@@ -105,7 +101,11 @@ error-prone logging.
 
 Used for effortlessly conveying error details, messages and relevant status code
 between different functions and application layers . Paired with `ExtractFromErr`,
-JSON responses can be automatically derived and written.
+JSON responses can be automatically derived and written. Grape's own helpers,
+such as `ReadJSON`, `Param` and `Query`, return `errs.Error` values for client
+mistakes, so their errors can be passed to `ExtractFromErr` as is. Panics
+recovered by `RecoverMiddleware`, and the router's 404 and 405 responses, are
+JSON too.
 
 ### `validator` package
 
