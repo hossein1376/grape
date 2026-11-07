@@ -70,8 +70,6 @@ func TestQueryOrDefault(t *testing.T) {
 	}
 }
 
-// ParseInt/ParseUint overflow checks rely on checkOverflow detecting that the
-// string representation after casting does not match the original string.
 func TestParseIntOverflow(t *testing.T) {
 	p := ParseInt[int8]()
 	_, err := p("128") // 128 doesn't fit in int8
@@ -105,14 +103,38 @@ func TestParseFloatSuccess(t *testing.T) {
 	}
 }
 
-func TestCheckOverflowMismatch(t *testing.T) {
-	var tval int8 = -128
-	_, err := checkOverflow("128", tval)
-	if err == nil {
-		t.Fatalf("expected ErrOverflow from checkOverflow, got nil")
+// Valid inputs whose canonical form differs from the input must parse.
+func TestParseNonCanonicalInputs(t *testing.T) {
+	ints := map[string]int{"+5": 5, "007": 7, "-0": 0, "-128": -128}
+	for s, want := range ints {
+		if got, err := ParseInt[int]()(s); err != nil || got != want {
+			t.Errorf("ParseInt(%q) = %v, %v; want %v", s, got, err, want)
+		}
 	}
-	if !errors.Is(err, ErrOverflow) {
-		t.Fatalf("expected ErrOverflow, got %v", err)
+	if got, err := ParseInt[int8]()("-128"); err != nil || got != -128 {
+		t.Errorf("ParseInt[int8](-128) = %v, %v; want -128", got, err)
+	}
+	if got, err := ParseUint[uint8]()("0255"); err != nil || got != 255 {
+		t.Errorf("ParseUint[uint8](0255) = %v, %v; want 255", got, err)
+	}
+	floats := map[string]float64{"1.0": 1, "1.50": 1.5, "0.10": 0.1, "1e3": 1000}
+	for s, want := range floats {
+		if got, err := ParseFloat[float64]()(s); err != nil || got != want {
+			t.Errorf("ParseFloat(%q) = %v, %v; want %v", s, got, err, want)
+		}
+	}
+	// Precision loss is rounding, not overflow.
+	if _, err := ParseFloat[float32]()("3.14159265358979"); err != nil {
+		t.Errorf("ParseFloat[float32] precision loss: unexpected error %v", err)
+	}
+}
+
+func TestParseFloatOverflow(t *testing.T) {
+	if _, err := ParseFloat[float32]()("1e40"); !errors.Is(err, ErrOverflow) {
+		t.Fatalf("expected ErrOverflow for float32 1e40, got %v", err)
+	}
+	if _, err := ParseInt[int]()("abc"); err == nil || errors.Is(err, ErrOverflow) {
+		t.Fatalf("expected a syntax error, got %v", err)
 	}
 }
 

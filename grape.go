@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 )
 
@@ -101,52 +102,60 @@ func QueryOrDefault[T any](
 
 // ParseInt will attempt to parse the given input into an integer of the
 // specified type. It can be used as an argument to the [Param] or similar
-// functions.
+// functions. [ErrOverflow] is returned if the value doesn't fit in the type.
 func ParseInt[
 	T ~int | ~int64 | ~int32 | ~int16 | ~int8,
 ]() func(string) (T, error) {
+	bits := reflect.TypeFor[T]().Bits()
 	return func(s string) (T, error) {
-		i, err := strconv.ParseInt(s, 10, 64)
+		i, err := strconv.ParseInt(s, 10, bits)
 		if err != nil {
-			return 0, err
+			return 0, rangeErr[T](s, err)
 		}
-		return checkOverflow(s, T(i))
+		return T(i), nil
 	}
 }
 
 // ParseUint will attempt to parse the given input into an unsigned integer of
 // the specified type. It can be used as an argument to the [Param] or similar
-// functions.
+// functions. [ErrOverflow] is returned if the value doesn't fit in the type.
 func ParseUint[
 	T ~uint | ~uint64 | ~uint32 | ~uint16 | ~uint8,
 ]() func(string) (T, error) {
+	bits := reflect.TypeFor[T]().Bits()
 	return func(s string) (T, error) {
-		i, err := strconv.ParseUint(s, 10, 64)
+		i, err := strconv.ParseUint(s, 10, bits)
 		if err != nil {
-			return 0, err
+			return 0, rangeErr[T](s, err)
 		}
-		return checkOverflow(s, T(i))
+		return T(i), nil
 	}
 }
 
 // ParseFloat will attempt to parse the given input into a floating point number
 // of the specified type. It can be used as an argument to the [Param] or
-// similar functions.
+// similar functions. [ErrOverflow] is returned if the value is out of the
+// type's range. The value is rounded to the type's precision, as
+// [strconv.ParseFloat] does.
 func ParseFloat[T ~float64 | ~float32]() func(string) (T, error) {
+	bits := reflect.TypeFor[T]().Bits()
 	return func(s string) (T, error) {
-		i, err := strconv.ParseFloat(s, 64)
+		f, err := strconv.ParseFloat(s, bits)
 		if err != nil {
-			return 0, err
+			return 0, rangeErr[T](s, err)
 		}
-		return checkOverflow(s, T(i))
+		return T(f), nil
 	}
 }
 
-func checkOverflow[T any](s string, t T) (T, error) {
-	if fmt.Sprintf("%v", t) != s {
-		return t, fmt.Errorf("%w: %s doesn't fit in %T", ErrOverflow, s, t)
+// rangeErr reports [strconv.ErrRange] as [ErrOverflow], and returns other
+// errors as is.
+func rangeErr[T any](s string, err error) error {
+	if errors.Is(err, strconv.ErrRange) {
+		var t T
+		return fmt.Errorf("%w: %s doesn't fit in %T", ErrOverflow, s, t)
 	}
-	return t, nil
+	return err
 }
 
 // Go spawns a new goroutine and will recover in case of panic; logging the
