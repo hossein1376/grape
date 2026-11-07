@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -147,5 +148,37 @@ func TestExtractFromErrGenericErrorIncludesReqID(t *testing.T) {
 	}
 	if r.Data != "my-id-123" {
 		t.Fatalf("expected Data to equal request id, got %v", r.Data)
+	}
+}
+
+func TestExtractFromErrPointerErrsError(t *testing.T) {
+	rec := httptest.NewRecorder()
+	e := errs.NotFound(errs.WithMsg("no such user"))
+	ExtractFromErr(context.Background(), rec, fmt.Errorf("lookup: %w", error(&e)))
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+	var body Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal body: %v", err)
+	}
+	if body.Message != "no such user" {
+		t.Fatalf("unexpected message: %v", body.Message)
+	}
+}
+
+// An errs.Error without a valid status code must not make WriteHeader panic.
+func TestExtractFromErrInvalidStatusCode(t *testing.T) {
+	for _, code := range []int{0, 42, 1000} {
+		rec := httptest.NewRecorder()
+		ExtractFromErr(
+			context.Background(),
+			rec,
+			errs.Error{Err: errors.New("x"), HTTPStatusCode: code},
+		)
+		if rec.Code != http.StatusInternalServerError {
+			t.Fatalf("status %d: expected 500, got %d", code, rec.Code)
+		}
 	}
 }

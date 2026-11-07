@@ -34,17 +34,16 @@ func Respond(
 }
 
 // ExtractFromErr extracts a response from the given error. If nil, 204 response
-// is returned. If error is of type [errs.Error], the status code and response
-// message are filled accordingly. Otherwise, a 500 response with the request ID
-// are returned.
+// is returned. If error is of type [errs.Error] or *[errs.Error], with a valid
+// HTTP status code, the status code and response message are filled
+// accordingly. Otherwise, a 500 response with the request ID are returned.
 func ExtractFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 	if err == nil {
 		Respond(ctx, w, http.StatusNoContent, nil)
 		return
 	}
 
-	var e errs.Error
-	if errors.As(err, &e) {
+	if e, ok := asError(err); ok {
 		msg := e.Message
 		if msg == "" {
 			msg = http.StatusText(e.HTTPStatusCode)
@@ -71,4 +70,22 @@ func ExtractFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 			Data:    reqID,
 		},
 	)
+}
+
+// asError finds the first [errs.Error] or *[errs.Error] in err's tree. It
+// reports false if there's none, or its status code can't be written, which
+// [http.ResponseWriter.WriteHeader] would panic on.
+func asError(err error) (errs.Error, bool) {
+	var e errs.Error
+	if !errors.As(err, &e) {
+		var pe *errs.Error
+		if !errors.As(err, &pe) || pe == nil {
+			return errs.Error{}, false
+		}
+		e = *pe
+	}
+	if e.HTTPStatusCode < 100 || e.HTTPStatusCode > 999 {
+		return errs.Error{}, false
+	}
+	return e, true
 }
