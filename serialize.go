@@ -8,6 +8,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -78,14 +79,16 @@ func WriteJSON(ctx context.Context, w http.ResponseWriter, opts ...WriteOpts) {
 	}
 }
 
-type readOptions[T any] struct {
+type readOptions struct {
 	maxBodySize int64
 }
 
-type ReadOpts[T any] func(*readOptions[T])
+type ReadOpts func(*readOptions)
 
-func WithMaxBodySize(size int64) func(*readOptions[any]) {
-	return func(o *readOptions[any]) {
+// WithMaxBodySize sets the maximum accepted body size in bytes for [ReadJSON]
+// and [ReadValidateJSON].
+func WithMaxBodySize(size int64) ReadOpts {
+	return func(o *readOptions) {
 		o.maxBodySize = size
 	}
 }
@@ -94,13 +97,13 @@ func WithMaxBodySize(size int64) func(*readOptions[any]) {
 // error in case of failure. By default, the maximum body size is 1MB, which can
 // be changed using WithMaxBodySize option.
 func ReadJSON[T any](
-	w http.ResponseWriter, r *http.Request, opts ...ReadOpts[T],
+	w http.ResponseWriter, r *http.Request, opts ...ReadOpts,
 ) (*T, error) {
 	ct := strings.ToLower(strings.TrimSpace(r.Header.Get("Content-Type")))
 	if !strings.HasPrefix(ct, "application/json") {
 		return nil, errors.New("content type is not application/json")
 	}
-	opt := &readOptions[T]{maxBodySize: defaultMaxBodySize}
+	opt := &readOptions{maxBodySize: defaultMaxBodySize}
 	for _, o := range opts {
 		o(opt)
 	}
@@ -154,13 +157,17 @@ func ReadJSON[T any](
 	}
 }
 
-// ReadValidateJSON reads and validates the json input.
+// ReadValidateJSON reads and validates the json input. If T is a pointer type,
+// a JSON null body is rejected rather than calling Validate on a nil pointer.
 func ReadValidateJSON[T Validator](
-	w http.ResponseWriter, r *http.Request, opts ...ReadOpts[T],
+	w http.ResponseWriter, r *http.Request, opts ...ReadOpts,
 ) (*T, error) {
-	t, err := ReadJSON(w, r, opts...)
+	t, err := ReadJSON[T](w, r, opts...)
 	if err != nil {
 		return nil, err
+	}
+	if v := reflect.ValueOf(*t); v.Kind() == reflect.Pointer && v.IsNil() {
+		return nil, errors.New("body must not be null")
 	}
 	if err := (*t).Validate(); err != nil {
 		return nil, fmt.Errorf("validate: %w", err)

@@ -133,6 +133,26 @@ func TestReadJSON_ValidateFails(t *testing.T) {
 	}
 }
 
+type ptrValidated struct{ Name string }
+
+func (p *ptrValidated) Validate() error {
+	if p.Name == "" {
+		return errors.New("name required")
+	}
+	return nil
+}
+
+// With a pointer T, a null body must be an error, not a nil-pointer Validate.
+func TestReadValidateJSON_NullBodyPointerType(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("null"))
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err := ReadValidateJSON[*ptrValidated](httptest.NewRecorder(), req)
+	if err == nil || !strings.Contains(err.Error(), "must not be null") {
+		t.Fatalf("expected null body error, got %v", err)
+	}
+}
+
 func TestReadJSON_ContentTypeMismatch(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{}`))
@@ -190,9 +210,7 @@ func TestReadJSON_TooLargeBody(t *testing.T) {
 	)
 	req.Header.Set("Content-Type", "application/json")
 
-	// provide a correctly-typed option for the generic ReadJSON
-	opt := func(o *readOptions[personPayload]) { o.maxBodySize = 16 }
-	_, err := ReadJSON[personPayload](rec, req, opt)
+	_, err := ReadJSON[personPayload](rec, req, WithMaxBodySize(16))
 	if err == nil || !strings.Contains(err.Error(), "body must not be larger than") {
 		t.Fatalf("expected body too large error, got %v", err)
 	}
