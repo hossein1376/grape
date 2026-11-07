@@ -3,7 +3,9 @@ package grape
 import (
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -18,56 +20,41 @@ func markerMiddleware(name string) func(http.Handler) http.Handler {
 	}
 }
 
+func writeBody(body string) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(body))
+	}
+}
+
+// serve sends a request through the router and returns the recorded response.
+func serve(r *Router, method, path string) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(method, path, nil))
+	return rec
+}
+
+func assertOrder(t *testing.T, rec *httptest.ResponseRecorder, want ...string) {
+	t.Helper()
+	if got := rec.Header()["X-Order"]; !slices.Equal(got, want) {
+		t.Fatalf("unexpected X-Order headers: got %v want %v", got, want)
+	}
+}
+
 // Test that basic Method registration and grouping work: a route registered
 // at root and one registered on a group should be served.
 func TestRouter_MethodRegistrationAndGroup(t *testing.T) {
 	r := NewRouter()
+	r.Get("/root", writeBody("root"))
+	r.Group("/v1").Get("/ping", writeBody("pong"))
 
-	// root handler
-	r.Get("/root", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("root"))
-	}))
-
-	// group handler
-	g := r.Group("/v1")
-	g.Get("/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("pong"))
-	}))
-
-	// Test root route - invoke the registered handler directly from the routes
-	// map
-	routes := r.root.routes[r.scope].routes
-	h, ok := routes["GET "+r.scope+"/root"]
-	if !ok {
-		t.Fatalf("route %q not registered", "GET "+r.scope+"/root")
-	}
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/root", nil)
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-	if strings.TrimSpace(rec.Body.String()) != "root" {
-		t.Fatalf("expected body 'root', got %q", rec.Body.String())
-	}
-
-	// Test group route - invoke the registered handler directly from the
-	// group's routes
-	routes = r.root.routes[g.scope].routes
-	h, ok = routes["GET "+g.scope+"/ping"]
-	if !ok {
-		t.Fatalf("route %q not registered", "GET "+g.scope+"/ping")
-	}
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v1/ping", nil)
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-	if strings.TrimSpace(rec.Body.String()) != "pong" {
-		t.Fatalf("expected body 'pong', got %q", rec.Body.String())
+	for path, want := range map[string]string{"/root": "root", "/v1/ping": "pong"} {
+		rec := serve(r, http.MethodGet, path)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: expected status 200, got %d", path, rec.Code)
+		}
+		if body := strings.TrimSpace(rec.Body.String()); body != want {
+			t.Fatalf("%s: expected body %q, got %q", path, want, body)
+		}
 	}
 }
 
@@ -75,64 +62,13 @@ func TestRouter_MethodRegistrationAndGroup(t *testing.T) {
 // defined after the Use call and that previously defined routes are not affected.
 func TestRouter_UseOrderAndScope(t *testing.T) {
 	r := NewRouter()
-
-	// Handler that writes a simple body
-	r.Get("/before", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("before"))
-	}))
-
-	// Add middleware that should only apply to routes registered after this point
+	r.Get("/before", writeBody("before"))
 	r.Use(markerMiddleware("m1"), markerMiddleware("m2"))
+	r.Get("/after", writeBody("after"))
 
-	// Route defined after Use -> should be wrapped by m1 and m2
-	r.Get("/after", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("after"))
-	}))
-
-	// Request to the route defined before Use: should not have middleware markers
-	routes := r.root.routes[r.scope].routes
-	h, ok := routes["GET "+r.scope+"/before"]
-	if !ok {
-		t.Fatalf("route %q not present", "GET "+r.scope+"/before")
-	}
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/before", nil)
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200 for /before, got %d", rec.Code)
-	}
-	hv := rec.Header()["X-Order"]
-	if len(hv) != 0 {
-		t.Fatalf(
-			"expected no X-Order headers for route defined before Use, got %v",
-			hv,
-		)
-	}
-
-	// Request to the route defined after Use: should have markers in expected order.
-	// With r.Use(m1, m2) we expect execution order: m1-before, m2-before, m2-after, m1-after
-	h, ok = routes["GET "+r.scope+"/after"]
-	if !ok {
-		t.Fatalf("route %q not present", "GET "+r.scope+"/after")
-	}
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/after", nil)
-	h.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200 for /after, got %d", rec.Code)
-	}
-	got := rec.Header()["X-Order"]
-	want := []string{"m1-before", "m2-before", "m2-after", "m1-after"}
-	if len(got) != len(want) {
-		t.Fatalf("unexpected X-Order headers length: got %v want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("unexpected X-Order at %d: got %q want %q", i, got[i], want[i])
-		}
-	}
+	assertOrder(t, serve(r, http.MethodGet, "/before"))
+	assertOrder(t, serve(r, http.MethodGet, "/after"),
+		"m1-before", "m2-before", "m2-after", "m1-after")
 }
 
 // Test that UseAll middlewares are applied to all handlers (including those
@@ -140,53 +76,76 @@ func TestRouter_UseOrderAndScope(t *testing.T) {
 // relative to route-specific middlewares.
 func TestRouter_UseAllPrecedence(t *testing.T) {
 	r := NewRouter()
-
-	// Add a global middleware that should wrap everything.
+	r.Get("/early", writeBody("early"))
 	r.UseAll(markerMiddleware("g1"), markerMiddleware("g2"))
-
-	// Add a per-scope middleware and a route afterward.
 	r.Use(markerMiddleware("m1"))
-	r.Get("/item", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("item"))
-	}))
+	r.Get("/item", writeBody("item"))
 
-	// Request the route and inspect middleware invocation order. Invoke the
-	// stored route handler (which includes per-scope middlewares) and then
-	// wrap it with the global middlewares to simulate top-level behaviour.
-	routes := r.root.routes[r.scope].routes
-	key := "GET " + r.scope + "/item"
-	h, ok := routes[key]
-	if !ok {
-		t.Fatalf("route %q not registered", key)
-	}
-	// apply global middlewares in the same order newHandler would
-	for _, mw := range r.root.global {
-		h = mw(h)
-	}
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/item", nil)
-	h.ServeHTTP(rec, req)
+	assertOrder(t, serve(r, http.MethodGet, "/early"),
+		"g1-before", "g2-before", "g2-after", "g1-after")
+	assertOrder(t, serve(r, http.MethodGet, "/item"),
+		"g1-before", "g2-before", "m1-before", "m1-after", "g2-after", "g1-after")
+	// Default handlers are wrapped too.
+	assertOrder(t, serve(r, http.MethodGet, "/missing"),
+		"g1-before", "g2-before", "g2-after", "g1-after")
+}
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
+// Calling Group again with the same prefix must not hand back a router that
+// lacks middlewares added to the parent in between, e.g. an auth check.
+func TestRouter_GroupSamePrefixKeepsLaterMiddlewares(t *testing.T) {
+	r := NewRouter()
+	r.Group("/api").Get("/public", writeBody("public"))
+	r.Use(func(http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		})
+	})
+	r.Group("/api").Get("/secret", writeBody("secret"))
 
-	// Expected order:
-	// UseAll(g1,g2) with provided order should result in execution order:
-	// g1-before, g2-before, m1-before, m1-after, g2-after, g1-after
-	got := rec.Header()["X-Order"]
-	want := []string{
-		"g1-before", "g2-before", "m1-before", "m1-after", "g2-after", "g1-after",
+	if code := serve(r, http.MethodGet, "/api/public").Code; code != http.StatusOK {
+		t.Fatalf("/api/public: expected 200, got %d", code)
 	}
+	if code := serve(r, http.MethodGet, "/api/secret").Code; code != http.StatusUnauthorized {
+		t.Fatalf("/api/secret: expected 401 from middleware, got %d", code)
+	}
+}
 
-	if len(got) != len(want) {
-		t.Fatalf("unexpected X-Order headers length: got %v want %v", got, want)
+func TestRouter_RoutesAndUseAllAfterFirstRequest(t *testing.T) {
+	r := NewRouter()
+	r.Get("/a", writeBody("a"))
+	serve(r, http.MethodGet, "/a")
+
+	r.Get("/b", writeBody("b"))
+	if code := serve(r, http.MethodGet, "/b").Code; code != http.StatusOK {
+		t.Fatalf("route added after first request: expected 200, got %d", code)
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf(
-				"unexpected X-Order at %d: got %q want %q", i, got[i], want[i],
-			)
-		}
+	r.UseAll(markerMiddleware("g"))
+	assertOrder(t, serve(r, http.MethodGet, "/a"), "g-before", "g-after")
+}
+
+// Run with -race: the handler is built on the first request.
+func TestRouter_ConcurrentFirstRequests(t *testing.T) {
+	r := NewRouter()
+	r.UseAll(markerMiddleware("g"))
+	r.Get("/a", writeBody("a"))
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() { serve(r, http.MethodGet, "/a") })
 	}
+	wg.Wait()
+}
+
+func TestRouter_UseDoesNotModifyArgument(t *testing.T) {
+	m1, m2 := markerMiddleware("m1"), markerMiddleware("m2")
+	mws := []func(http.Handler) http.Handler{m1, m2}
+	r := NewRouter()
+	r.Use(mws...)
+	r.UseAll(mws...)
+	r.Get("/", writeBody(""))
+
+	// Had Use reversed mws in place, UseAll would register them as m2, m1.
+	assertOrder(t, serve(r, http.MethodGet, "/"),
+		"m1-before", "m2-before", "m1-before", "m2-before",
+		"m2-after", "m1-after", "m2-after", "m1-after")
 }
