@@ -9,6 +9,7 @@ import (
 	"github.com/hossein1376/grape/errs"
 	"github.com/hossein1376/grape/reqid"
 	"github.com/hossein1376/grape/slogger"
+	"github.com/hossein1376/grape/validator"
 )
 
 type Response struct {
@@ -36,7 +37,15 @@ func Respond(
 // ExtractFromErr extracts a response from the given error. If nil, 204 response
 // is returned. If error is of type [errs.Error] or *[errs.Error], with a valid
 // HTTP status code, the status code and response message are filled
-// accordingly. Otherwise, a 500 response with the request ID are returned.
+// accordingly. Otherwise, if error is a [validator.ValidationError], a 400
+// response with the field errors as data is returned:
+//
+//	{"message": "Bad Request", "data": {"age": ["must be at least 0"]}}
+//
+// Otherwise, a 500 response with the request ID are returned.
+//
+// [errs.Error] takes precedence: a ValidationError wrapped in it with
+// [errs.WithErr] is considered internal, and its fields aren't sent.
 func ExtractFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 	if err == nil {
 		Respond(ctx, w, http.StatusNoContent, nil)
@@ -56,6 +65,21 @@ func ExtractFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 			slog.Int("status_code", e.HTTPStatusCode),
 			slog.String("message", msg),
 		)
+		return
+	}
+
+	var fields validator.ValidationError
+	if errors.As(err, &fields) && len(fields) != 0 {
+		Respond(
+			ctx,
+			w,
+			http.StatusBadRequest,
+			Response{
+				Message: http.StatusText(http.StatusBadRequest),
+				Data:    fields,
+			},
+		)
+		slogger.Debug(ctx, "validation failed", slogger.Err("error", err))
 		return
 	}
 

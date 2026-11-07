@@ -11,6 +11,7 @@ import (
 
 	"github.com/hossein1376/grape/errs"
 	"github.com/hossein1376/grape/reqid"
+	"github.com/hossein1376/grape/validator"
 )
 
 // TestRespondWritesJSON verifies Respond writes JSON body and headers when data
@@ -180,5 +181,51 @@ func TestExtractFromErrInvalidStatusCode(t *testing.T) {
 		if rec.Code != http.StatusInternalServerError {
 			t.Fatalf("status %d: expected 500, got %d", code, rec.Code)
 		}
+	}
+}
+
+func TestExtractFromErrValidationError(t *testing.T) {
+	v := validator.New()
+	v.Number("age", -1).Min(0)
+	rec := httptest.NewRecorder()
+	ExtractFromErr(context.Background(), rec, fmt.Errorf("validate: %w", v.Err()))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+	var body struct {
+		Message string              `json:"message"`
+		Data    map[string][]string `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal body: %v", err)
+	}
+	if body.Message != "Bad Request" || len(body.Data["age"]) != 1 ||
+		body.Data["age"][0] != "must be at least 0" {
+		t.Fatalf("unexpected body: %s", rec.Body.String())
+	}
+}
+
+// A ValidationError wrapped in errs.Error is internal: only the errs.Error's
+// status and message are sent.
+func TestExtractFromErrValidationErrorInsideErrsError(t *testing.T) {
+	v := validator.New()
+	v.Number("age", -1).Min(0)
+	rec := httptest.NewRecorder()
+	ExtractFromErr(
+		context.Background(),
+		rec,
+		errs.New(http.StatusUnprocessableEntity, errs.WithErr(v.Err())),
+	)
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422, got %d", rec.Code)
+	}
+	var body Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal body: %v", err)
+	}
+	if body.Data != nil {
+		t.Fatalf("expected no field errors in response, got %v", body.Data)
 	}
 }
