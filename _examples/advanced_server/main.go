@@ -49,8 +49,10 @@ func router() *grape.Router {
 		grape.RequestIDMiddleware,
 		grape.RecoverMiddleware,
 		grape.LoggerMiddleware,
-		grape.CORSMiddleware,
 	)
+	// CORS must cover the OPTIONS preflight requests, which don't match any
+	// of the routes, so it's registered with UseAll.
+	r.UseAll(grape.CORSMiddleware)
 
 	// if you want the middleware to affect default handlers such as NotFound or MethodNotAllowed as well, use UseAll.
 	// r.UseAll(h.LoggerMiddleware)
