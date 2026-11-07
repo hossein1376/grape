@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 )
 
 func Err(msg string, err error) slog.Attr {
@@ -35,6 +36,20 @@ type ContextHandler struct {
 	slog.Handler
 }
 
+// WithAttrs returns a ContextHandler wrapping the underlying handler's
+// WithAttrs, so loggers derived with [slog.Logger.With] keep logging context
+// attributes.
+func (h ContextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return ContextHandler{h.Handler.WithAttrs(attrs)}
+}
+
+// WithGroup returns a ContextHandler wrapping the underlying handler's
+// WithGroup, so loggers derived with [slog.Logger.WithGroup] keep logging
+// context attributes.
+func (h ContextHandler) WithGroup(name string) slog.Handler {
+	return ContextHandler{h.Handler.WithGroup(name)}
+}
+
 // Handle adds contextual attributes to the Record before calling the underlying
 // handler.
 func (h ContextHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -57,13 +72,8 @@ func WithAttrs(parent context.Context, attr ...slog.Attr) context.Context {
 		return parent
 	}
 
-	// if some slog attributes already exist, append to them
-	if v, ok := parent.Value(slogAttrs).([]slog.Attr); ok {
-		v = append(v, attr...)
-		return context.WithValue(parent, slogAttrs, v)
-	}
-
-	var v []slog.Attr
-	v = append(v, attr...)
-	return context.WithValue(parent, slogAttrs, v)
+	// Copy into a new slice rather than appending to the parent's, which
+	// other contexts derived from the same parent share.
+	v, _ := parent.Value(slogAttrs).([]slog.Attr)
+	return context.WithValue(parent, slogAttrs, slices.Concat(v, attr))
 }
