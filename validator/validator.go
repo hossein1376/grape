@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -69,6 +68,9 @@ func (v Validator) Validate() bool {
 }
 
 func (v *Validator) addError(key, message string) {
+	if v.Errors == nil {
+		v.Errors = make(ValidationError)
+	}
 	v.Errors[key] = append(v.Errors[key], message)
 }
 
@@ -124,10 +126,18 @@ func Contains[T ~string](input T, values ...T) bool {
 	return false
 }
 
-// IsNumber checks if the given string is all numbers.
+// IsNumber checks if the given string is non-empty and consists only of ASCII
+// digits (0-9), of any length. Signs, spaces, and decimal points are rejected.
 func IsNumber[T ~string](input T) bool {
-	_, err := strconv.Atoi(string(input))
-	return err == nil
+	if len(input) == 0 {
+		return false
+	}
+	for i := range len(input) {
+		if input[i] < '0' || input[i] > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // In checks if the input is present in the given list of arguments.

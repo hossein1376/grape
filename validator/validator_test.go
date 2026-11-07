@@ -116,6 +116,15 @@ func TestIsNumber(t *testing.T) {
 			value: "12#de5$9!",
 			want:  false,
 		},
+		{
+			name:  "Longer than int64",
+			value: "123456789012345678901234567890",
+			want:  true,
+		},
+		{name: "Empty", value: "", want: false},
+		{name: "Plus sign", value: "+5", want: false},
+		{name: "Minus sign", value: "-5", want: false},
+		{name: "Non-ASCII digit", value: "١٢", want: false},
 	}
 
 	for _, tt := range tests {
@@ -631,6 +640,17 @@ func TestValidator_Check_Validate(t *testing.T) {
 				t.Errorf("expected validation to be %v, got %v", tt.valid, v.Validate())
 			}
 		})
+	}
+}
+
+func TestValidator_ZeroValue(t *testing.T) {
+	var v Validator
+	v.Check("name", Case{Cond: false, Msg: "required"})
+	if v.Validate() {
+		t.Fatal("expected validation to fail")
+	}
+	if got := v.Errors["name"]; len(got) != 1 || got[0] != "required" {
+		t.Fatalf("unexpected errors: %v", v.Errors)
 	}
 }
 
